@@ -1,0 +1,67 @@
+[
+  {
+    "cycle": 1,
+    "action_key": "transport.cycle_short_commute",
+    "category": "transport",
+    "response": "skipped",
+    "reason_code": "not_practical",
+    "note": "Commute has heavy highway traffic without bike lanes"
+  },
+  {
+    "cycle": 1,
+    "action_key": "electricity.ac_temp_24c",
+    "category": "electricity",
+    "response": "accepted",
+    "reason_code": null,
+    "note": "Comfortable with setting thermostat to 24C"
+  },
+  {
+    "cycle": 1,
+    "action_key": "food.meatless_monday",
+    "category": "food",
+    "response": "accepted",
+    "reason_code": null,
+    "note": "Enjoyed trying vegetarian recipes on Mondays"
+  },
+  {
+    "cycle": 1,
+    "action_key": "shopping.buy_refurbished_electronics",
+    "category": "shopping",
+    "response": "skipped",
+    "reason_code": "too_costly",
+    "note": "Currently not planning to purchase any new devices"
+  },
+  {
+    "cycle": 2,
+    "action_key": "transport.shift_auto_to_bus",
+    "category": "transport",
+    "response": "accepted",
+    "reason_code": null,
+    "note": "Bus stop is conveniently located near my office"
+  },
+  {
+    "cycle": 2,
+    "action_key": "electricity.led_bulb_replacement",
+    "category": "electricity",
+    "response": "completed",
+    "reason_code": null,
+    "note": "Replaced remaining incandescent bulbs in living room"
+  },
+  {
+    "cycle": 2,
+    "action_key": "waste.compost_kitchen_waste",
+    "category": "waste",
+    "response": "skipped",
+    "reason_code": "not_practical",
+    "note": "Apartment balcony has insufficient space for composting bin"
+  },
+  {
+    "cycle": 2,
+    "action_key": "food.local_seasonal_produce",
+    "category": "food",
+    "response": "modified",
+    "reason_code": null,
+    "modified_params": { "meals_per_week": 3 },
+    "note": "Switched 3 meals a week to locally sourced vegetables"
+  }
+]
