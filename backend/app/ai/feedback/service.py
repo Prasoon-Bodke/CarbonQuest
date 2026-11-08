@@ -1,5 +1,6 @@
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from app.models import Recommendation, ActionCatalog
+from app.models import Recommendation
 from app.ai.repo import AIRepository
 from app.ai.adaptive.update import update_preference_profile
 from app.services.rewards.service import on_event
@@ -16,7 +17,19 @@ class FeedbackService:
         modified_params: Optional[Dict[str, Any]] = None,
         note: Optional[str] = "",
     ) -> Dict[str, Any]:
-        # 1. Record feedback row in AI table
+        # 1. Ownership & existence check
+        rec = db.query(Recommendation).filter(Recommendation.id == recommendation_id).first()
+        if not rec or rec.user_id != user_id:
+            raise HTTPException(status_code=404, detail="Recommendation not found")
+
+        # Conflict check if already responded
+        if rec.status in ("accepted", "completed", "skipped", "rejected", "modified"):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Recommendation has already been responded to with status '{rec.status}'",
+            )
+
+        # 2. Record feedback row in AI table
         fb = AIRepository.record_feedback(
             db,
             recommendation_id=recommendation_id,
@@ -27,16 +40,15 @@ class FeedbackService:
             note=note,
         )
 
-        rec = db.query(Recommendation).filter(Recommendation.id == recommendation_id).first()
         action_key = "unknown"
         category = "transport"
-        if rec and rec.action:
+        if rec.action:
             action_key = rec.action.action_key
             category = rec.action.category
 
-        # 2. Update preference profile via Beta-Bernoulli update
+        # 3. Update preference profile via Beta-Bernoulli update
         profile = AIRepository.get_or_create_preference_profile(db, user_id)
-        current_cycle = rec.cycle if rec else 1
+        current_cycle = rec.cycle or 1
         updated_profile, summary = update_preference_profile(
             profile=profile,
             action_key=action_key,
@@ -44,10 +56,11 @@ class FeedbackService:
             response=response,
             reason_code=reason_code,
             current_cycle=current_cycle,
+            modified_params=modified_params,
         )
         db.commit()
 
-        # 3. Call T2's cross-module hook on_event
+        # 4. Call T2's cross-module hook on_event
         event_name = f"feedback_{response}"
         reward_result = on_event(db, user_id=user_id, event=event_name, ref=recommendation_id)
 

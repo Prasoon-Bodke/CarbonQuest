@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import Optional, List, Dict, Any
 from app.core.deps import get_db, get_current_user
 from app.ai.repo import AIRepository
@@ -8,7 +9,7 @@ from app.ai.feedback.service import FeedbackService
 from app.ai.adaptive.metrics import AdaptiveMetricsService
 from app.ai.explain.builder import ExplanationBuilder
 from app.ai.chat.service import ChatService
-from app.models import Recommendation, ActionLog, ActionCatalog, ChatSession, ChatMessage
+from app.models import Recommendation, ActionLog, ActionCatalog, ChatSession, ChatMessage, RecommendationFeedback
 from app.schemas.recommendation import (
     RecommendationGenerateRequest,
     RecommendationGenerateResponse,
@@ -33,7 +34,10 @@ async def generate_recommendations(
     user_id: str = Depends(get_current_user),
 ):
     profile = AIRepository.get_or_create_preference_profile(db, user_id)
-    cycle = 3 # Calibrated active cycle for demo
+
+    # Dynamic cycle calculation based on user's past cycles
+    max_cycle = db.query(func.max(Recommendation.cycle)).filter(Recommendation.user_id == user_id).scalar()
+    cycle = (max_cycle or 0) + 1
 
     ranked_items = RecommendationRanker.generate_and_rank(
         db=db,
@@ -46,17 +50,19 @@ async def generate_recommendations(
 
     db_recs = []
     response_items = []
-    changes_since_last_cycle = []
+    any_degraded = False
 
     for item in ranked_items:
         rec_id = str(uuid.uuid4())
-        # Generate explainable text
+        # Generate explainable text with strict validator and graceful fallback
         explanation, exp_source, degraded = await ExplanationBuilder.build_explanation(
             action_title=item["title"],
             category=item["category"],
             saving_kg=item["estimated_saving_kg_month"],
             why_context=f"Priority score: {item['score']:.2f}. Category weight: {profile.category_weights.get(item['category'], 1.0)}.",
         )
+        if degraded:
+            any_degraded = True
 
         db_rec = Recommendation(
             id=rec_id,
@@ -97,17 +103,40 @@ async def generate_recommendations(
     # Save to database
     AIRepository.save_recommendations(db, db_recs)
 
-    # Demonstration changes note
-    changes_since_last_cycle = [
-        "Transit actions prioritized higher based on positive response history and commute share."
-    ]
+    # Dynamic changes since last cycle
+    changes_since_last_cycle: List[str] = []
+    if cycle > 1:
+        prev_recs = (
+            db.query(Recommendation)
+            .filter(Recommendation.user_id == user_id, Recommendation.cycle == cycle - 1)
+            .all()
+        )
+        for pr in prev_recs:
+            if pr.status in ("skipped", "rejected"):
+                fb = (
+                    db.query(RecommendationFeedback)
+                    .filter(RecommendationFeedback.recommendation_id == pr.id)
+                    .first()
+                )
+                reason_str = f" as {fb.reason_code}" if fb and fb.reason_code else ""
+                title = pr.action.title if pr.action else pr.action_id
+                changes_since_last_cycle.append(f"{title} ranked lower: {pr.status}{reason_str}")
+
+        if not changes_since_last_cycle:
+            changes_since_last_cycle.append(
+                "Recommendations refreshed and prioritized based on active footprint hotspots."
+            )
+    else:
+        changes_since_last_cycle.append(
+            "Initial recommendation set generated from baseline carbon footprint and hotspots."
+        )
 
     return RecommendationGenerateResponse(
         cycle=cycle,
-        degraded=False,
+        degraded=any_degraded,
         items=response_items,
         adaptation={
-            "feedback_count": profile.feedback_count,
+            "feedback_count": profile.feedback_count or 0,
             "changes_since_last_cycle": changes_since_last_cycle,
         },
     )
@@ -144,7 +173,7 @@ def get_recommendation_explanation(
     user_id: str = Depends(get_current_user),
 ):
     rec = db.query(Recommendation).filter(Recommendation.id == recommendation_id).first()
-    if not rec:
+    if not rec or rec.user_id != user_id:
         raise HTTPException(status_code=404, detail="Recommendation not found")
     return {
         "id": rec.id,
