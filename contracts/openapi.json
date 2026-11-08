@@ -233,6 +233,66 @@
         }
       }
     },
+    "/api/v1/me/onboarding": {
+      "post": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Complete Onboarding",
+        "description": "CP-1 Onboarding Endpoint:\nStores user preferences and expands baseline habits into 28 days of past dated activities\nthrough the standard validation and deterministic carbon engine pipeline.\nIdempotent via dedupe_hash.",
+        "operationId": "complete_onboarding_api_v1_me_onboarding_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/emission-factors": {
       "get": {
         "tags": [
@@ -442,6 +502,72 @@
       }
     },
     "/api/v1/activities/{activity_id}": {
+      "patch": {
+        "tags": [
+          "Activities"
+        ],
+        "summary": "Update Activity",
+        "operationId": "update_activity_api_v1_activities__activity_id__patch",
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Activity Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "tags": [
           "Activities"
@@ -767,6 +893,22 @@
         "operationId": "get_catalog_api_v1_actions_catalog_get",
         "parameters": [
           {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
             "name": "authorization",
             "in": "header",
             "required": false,
@@ -872,6 +1014,18 @@
         "summary": "List Simulation History",
         "operationId": "list_simulation_history_api_v1_simulations_get",
         "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
           {
             "name": "authorization",
             "in": "header",
@@ -1077,6 +1231,7 @@
           "Impact"
         ],
         "summary": "Get Impact Summary",
+        "description": "Task 10: Reads recommendations table read-only for accepted action count\nand summed estimated saving. Sets measured.available = false per prototype scope.",
         "operationId": "get_impact_summary_api_v1_impact_summary_get",
         "parameters": [
           {
@@ -2177,15 +2332,21 @@
             "title": "Estimated Kg Month"
           },
           "measured_kg_month": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Measured Kg Month"
           }
         },
         "type": "object",
         "required": [
           "action_key",
-          "estimated_kg_month",
-          "measured_kg_month"
+          "estimated_kg_month"
         ],
         "title": "ActionImpactItem"
       },
@@ -2461,6 +2622,90 @@
           "validation_score"
         ],
         "title": "ActivityReadItem"
+      },
+      "ActivityUpdate": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CategoryEnum"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "activity_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Key"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "occurred_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred On"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceEnum"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "title": "ActivityUpdate"
       },
       "AdaptationSummary": {
         "properties": {
@@ -3043,6 +3288,28 @@
             ],
             "title": "Change Pct"
           },
+          "target_kg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Kg"
+          },
+          "target_used_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Used Pct"
+          },
           "confidence": {
             "type": "number",
             "title": "Confidence"
@@ -3179,6 +3446,45 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HabitInput": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "activity_key": {
+            "type": "string",
+            "title": "Activity Key"
+          },
+          "frequency": {
+            "type": "string",
+            "title": "Frequency",
+            "default": "daily"
+          },
+          "quantity": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Quantity"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "activity_key",
+          "quantity",
+          "unit"
+        ],
+        "title": "HabitInput"
+      },
       "HotspotItem": {
         "properties": {
           "rank": {
@@ -3208,6 +3514,16 @@
           "why": {
             "type": "string",
             "title": "Why"
+          },
+          "top_opportunity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HotspotOpportunity"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -3221,6 +3537,34 @@
           "why"
         ],
         "title": "HotspotItem"
+      },
+      "HotspotOpportunity": {
+        "properties": {
+          "action_key": {
+            "type": "string",
+            "title": "Action Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "estimated_saving_kg_month": {
+            "type": "number",
+            "title": "Estimated Saving Kg Month"
+          },
+          "difficulty": {
+            "type": "integer",
+            "title": "Difficulty"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action_key",
+          "title",
+          "estimated_saving_kg_month",
+          "difficulty"
+        ],
+        "title": "HotspotOpportunity"
       },
       "ImpactSummaryResponse": {
         "properties": {
@@ -3250,18 +3594,40 @@
         "properties": {
           "available": {
             "type": "boolean",
-            "title": "Available"
+            "title": "Available",
+            "default": false
           },
           "baseline_kg": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Baseline Kg"
           },
           "current_kg": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Current Kg"
           },
           "change_kg": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Change Kg"
           },
           "basis": {
@@ -3275,13 +3641,102 @@
         },
         "type": "object",
         "required": [
-          "available",
-          "baseline_kg",
-          "current_kg",
-          "change_kg",
           "note"
         ],
         "title": "MeasuredImpact"
+      },
+      "OnboardingInput": {
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "age_band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Band"
+          },
+          "household_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Household Size",
+            "default": 2
+          },
+          "monthly_target_kg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Target Kg",
+            "default": 100.0
+          },
+          "preferences": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferences"
+          },
+          "habits": {
+            "items": {
+              "$ref": "#/components/schemas/HabitInput"
+            },
+            "type": "array",
+            "title": "Habits"
+          }
+        },
+        "type": "object",
+        "title": "OnboardingInput"
+      },
+      "OnboardingResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "activities_created": {
+            "type": "integer",
+            "title": "Activities Created"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/ProfileRead"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "activities_created",
+          "profile"
+        ],
+        "title": "OnboardingResponse"
       },
       "ProfileRead": {
         "properties": {

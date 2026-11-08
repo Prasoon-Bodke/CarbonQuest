@@ -1,0 +1,61 @@
+{
+  "request": {
+    "display_name": "Aarav Sharma",
+    "age_band": "25-34",
+    "household_size": 2,
+    "monthly_target_kg": 100.0,
+    "preferences": {
+      "ok_modes": ["bus", "metro", "bicycle", "two_wheeler"],
+      "diet": "vegetarian",
+      "budget_level": "medium",
+      "effort_level": "medium"
+    },
+    "habits": [
+      {
+        "category": "transport",
+        "activity_key": "transport.two_wheeler_petrol_km",
+        "frequency": "daily",
+        "quantity": 15.0,
+        "unit": "km",
+        "metadata": { "mode": "two_wheeler", "duration_min": 35 }
+      },
+      {
+        "category": "electricity",
+        "activity_key": "electricity.ac_hours",
+        "frequency": "daily",
+        "quantity": 2.0,
+        "unit": "hours",
+        "metadata": { "ac_power_kw": 1.5 }
+      },
+      {
+        "category": "food",
+        "activity_key": "food.meal_veg",
+        "frequency": "daily",
+        "quantity": 2.0,
+        "unit": "meal",
+        "metadata": {}
+      }
+    ]
+  },
+  "response": {
+    "status": "ok",
+    "activities_created": 84,
+    "profile": {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "display_name": "Aarav Sharma",
+      "age_band": "25-34",
+      "region_code": "IN",
+      "household_size": 2,
+      "monthly_target_kg": 100.0,
+      "preferences": {
+        "ok_modes": ["bus", "metro", "bicycle", "two_wheeler"],
+        "diet": "vegetarian",
+        "budget_level": "medium",
+        "effort_level": "medium"
+      },
+      "consent_tracking": true,
+      "consent_leaderboard": true,
+      "onboarding_done": true
+    }
+  }
+}

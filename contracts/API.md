@@ -42,6 +42,38 @@
 - **Owner**: T2
 - **Description**: Updates user consent flags for activity tracking and community leaderboard.
 
+### `POST /me/onboarding`
+- **Owner**: T2
+- **Description**: Sets initial baseline parameters and expands habits into 28 days of validated activities. Strictly idempotent via dedupe_hash.
+- **Request**:
+```json
+{
+  "display_name": "Aarav Sharma",
+  "monthly_target_kg": 100.0,
+  "habits": [
+    {
+      "category": "transport",
+      "activity_key": "transport.two_wheeler_petrol_km",
+      "frequency": "daily",
+      "quantity": 15.0,
+      "unit": "km",
+      "metadata": { "mode": "two_wheeler", "duration_min": 35 }
+    }
+  ]
+}
+```
+- **Response**:
+```json
+{
+  "status": "ok",
+  "activities_created": 28,
+  "profile": {
+    "id": "00000000-0000-0000-0000-000000000001",
+    "onboarding_done": true
+  }
+}
+```
+
 ### `GET /me/export`
 - **Owner**: T2
 - **Description**: Machine-readable JSON export of all personal profiles, activity logs, emission records, and recommendations.
@@ -111,6 +143,22 @@
 - **Owner**: T2
 - **Description**: Paginated list of logged activities with optional category filter.
 
+### `PATCH /activities/{id}`
+- **Owner**: T2
+- **Description**: Updates activity details and recalculates deterministic emission record.
+- **Request**:
+```json
+{
+  "quantity": 20.0,
+  "metadata": { "mode": "metro", "duration_min": 35 }
+}
+```
+- **Response**: Returns updated `activity` and recalculated `emission` record.
+
+### `DELETE /activities/{id}`
+- **Owner**: T2
+- **Description**: Permanently deletes an activity log and cascades removal of associated emission record.
+
 ---
 
 ## 3. Footprint & Hotspots
@@ -134,6 +182,8 @@
   ],
   "previous_period_total_kg": 135.0,
   "change_pct": -5.2,
+  "target_kg": 100.0,
+  "target_used_pct": 128.0,
   "confidence": 0.75,
   "confidence_label": "high",
   "activity_count": 41
