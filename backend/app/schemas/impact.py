@@ -8,17 +8,17 @@ class EstimatedImpact(BaseModel):
     basis: BasisEnum = BasisEnum.estimated
 
 class MeasuredImpact(BaseModel):
-    available: bool
-    baseline_kg: float
-    current_kg: float
-    change_kg: float
+    available: bool = False
+    baseline_kg: Optional[float] = None
+    current_kg: Optional[float] = None
+    change_kg: Optional[float] = None
     basis: BasisEnum = BasisEnum.measured
     note: str
 
 class ActionImpactItem(BaseModel):
     action_key: str
     estimated_kg_month: float
-    measured_kg_month: float
+    measured_kg_month: Optional[float] = None
 
 class ImpactSummaryResponse(BaseModel):
     estimated: EstimatedImpact

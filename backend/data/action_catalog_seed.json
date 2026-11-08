@@ -9,7 +9,7 @@
     "default_params": {
       "target_activity_key": "transport.bus_km",
       "trips_per_week": 2,
-      "trip_distance_km": 10
+      "trip_distance_km": 10.0
     },
     "difficulty": 2,
     "cost_level": 1,
@@ -26,11 +26,61 @@
     "default_params": {
       "target_activity_key": null,
       "trips_per_week": 2,
-      "trip_distance_km": 3
+      "trip_distance_km": 3.0
     },
     "difficulty": 3,
     "cost_level": 1,
     "tags": ["active_mobility", "fitness", "zero_emission"],
+    "is_active": true
+  },
+  {
+    "action_key": "transport.metro_weekly_commute",
+    "title": "Take the metro for long-distance city travel",
+    "description": "Switch from private car to rapid electric metro rail for cross-city travel.",
+    "category": "transport",
+    "activity_key": "transport.car_petrol_km",
+    "change_type": "shift_mode",
+    "default_params": {
+      "target_activity_key": "transport.metro_km",
+      "trips_per_week": 2,
+      "trip_distance_km": 15.0
+    },
+    "difficulty": 1,
+    "cost_level": 1,
+    "tags": ["metro", "traffic_free", "low_carbon"],
+    "is_active": true
+  },
+  {
+    "action_key": "transport.ev_scooter_switch",
+    "title": "Switch to electric two-wheeler commuting",
+    "description": "Transition daily two-wheeler commuting from petrol scooter to high-efficiency EV scooter.",
+    "category": "transport",
+    "activity_key": "transport.two_wheeler_petrol_km",
+    "change_type": "shift_mode",
+    "default_params": {
+      "target_activity_key": "transport.two_wheeler_ev_km",
+      "trips_per_week": 5,
+      "trip_distance_km": 12.0
+    },
+    "difficulty": 4,
+    "cost_level": 2,
+    "tags": ["ev", "clean_tech", "fuel_saver"],
+    "is_active": true
+  },
+  {
+    "action_key": "electricity.set_ac_24_degrees",
+    "title": "Set AC temperature to 24°C standard",
+    "description": "Operate split air conditioner at BEE recommended 24°C instead of 20°C to conserve ~20% electricity.",
+    "category": "electricity",
+    "activity_key": "electricity.ac_hours",
+    "change_type": "reduce_quantity",
+    "default_params": {
+      "delta_percentage": 0.20,
+      "delta_per_day": -0.8
+    },
+    "difficulty": 1,
+    "cost_level": 1,
+    "tags": ["cooling", "quick_win", "money_saver"],
     "is_active": true
   },
   {
@@ -50,18 +100,18 @@
     "is_active": true
   },
   {
-    "action_key": "electricity.set_ac_24_degrees",
-    "title": "Set AC temperature to 24°C standard",
-    "description": "Operate split air conditioner at BEE recommended 24°C instead of 20°C to conserve ~24% electricity.",
+    "action_key": "electricity.rooftop_solar_switch",
+    "title": "Install 1kW rooftop solar PV system",
+    "description": "Offset grid electricity with clean decentralized rooftop solar generation.",
     "category": "electricity",
-    "activity_key": "electricity.ac_hours",
+    "activity_key": "electricity.grid_kwh",
     "change_type": "reduce_quantity",
     "default_params": {
-      "delta_percentage": 0.20
+      "delta_per_day": -4.0
     },
-    "difficulty": 1,
-    "cost_level": 1,
-    "tags": ["cooling", "quick_win", "money_saver"],
+    "difficulty": 4,
+    "cost_level": 2,
+    "tags": ["solar", "renewable", "self_generation"],
     "is_active": true
   },
   {
@@ -81,6 +131,67 @@
     "is_active": true
   },
   {
+    "action_key": "food.vegan_breakfast_swap",
+    "title": "Switch to plant-based breakfast bowls",
+    "description": "Substitute dairy milk and eggs with oats, nuts, and local seasonal fruits for morning meals.",
+    "category": "food",
+    "activity_key": "food.meal_veg",
+    "change_type": "swap_item",
+    "default_params": {
+      "target_activity_key": "food.meal_vegan",
+      "swaps_per_week": 3
+    },
+    "difficulty": 1,
+    "cost_level": 1,
+    "tags": ["breakfast", "wellness", "dairy_free"],
+    "is_active": true
+  },
+  {
+    "action_key": "food.zero_food_waste",
+    "title": "Prevent 1 kg of household food waste per week",
+    "description": "Plan weekly grocery purchases and utilize meal prep to prevent cooked food spoilage.",
+    "category": "food",
+    "activity_key": "food.waste_kg",
+    "change_type": "reduce_quantity",
+    "default_params": {
+      "delta_per_day": -0.15
+    },
+    "difficulty": 2,
+    "cost_level": 1,
+    "tags": ["food_waste", "kitchen", "money_saver"],
+    "is_active": true
+  },
+  {
+    "action_key": "shopping.reusable_bag_habit",
+    "title": "Carry cloth bags and avoid retail packaging",
+    "description": "Eliminate single-use plastic and paper delivery bags for grocery and retail shopping.",
+    "category": "shopping",
+    "activity_key": "shopping.delivery_package",
+    "change_type": "reduce_quantity",
+    "default_params": {
+      "delta_per_day": -0.3
+    },
+    "difficulty": 1,
+    "cost_level": 1,
+    "tags": ["plastic_free", "bag_habit", "easy_win"],
+    "is_active": true
+  },
+  {
+    "action_key": "shopping.thrift_wardrobe_swap",
+    "title": "Choose thrift or vintage clothing items",
+    "description": "Opt for pre-loved or durable recycled garments instead of fast-fashion purchases.",
+    "category": "shopping",
+    "activity_key": "shopping.clothing_item",
+    "change_type": "reduce_quantity",
+    "default_params": {
+      "delta_per_day": -0.05
+    },
+    "difficulty": 2,
+    "cost_level": 1,
+    "tags": ["circular_fashion", "slow_living", "mindful_spending"],
+    "is_active": true
+  },
+  {
     "action_key": "waste.compost_wet_waste",
     "title": "Segregate and compost household wet waste",
     "description": "Divert kitchen food scraps from landfill to home or community composting units.",
@@ -94,6 +205,21 @@
     "difficulty": 3,
     "cost_level": 1,
     "tags": ["waste_management", "circular", "soil_health"],
+    "is_active": true
+  },
+  {
+    "action_key": "waste.recycle_dry_segregation",
+    "title": "Segregate paper, cardboard, and recyclable plastic",
+    "description": "Route clean dry paper, carton, and plastic waste to authorized recyclers.",
+    "category": "waste",
+    "activity_key": "waste.landfill_kg",
+    "change_type": "reduce_quantity",
+    "default_params": {
+      "delta_per_day": -0.25
+    },
+    "difficulty": 1,
+    "cost_level": 1,
+    "tags": ["recycling", "dry_waste", "clean_neighborhood"],
     "is_active": true
   }
 ]

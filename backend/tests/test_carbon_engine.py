@@ -2,6 +2,31 @@ import pytest
 from app.services.validation.rules import validate_activity
 from app.services.carbon.impact import project_scenario
 
+def test_hand_computed_factor_math():
+    # Sourced values from emission_factors_seed.csv / SOURCES.md
+    factors = {
+        "transport.car_petrol_km": 0.174,
+        "electricity.grid_kwh": 0.820,
+        "food.meal_non_veg": 2.150,
+        "shopping.clothing_item": 8.500,
+        "waste.landfill_kg": 0.950,
+    }
+
+    # 1. Transport: 100 km petrol car
+    assert round(100.0 * factors["transport.car_petrol_km"], 3) == 17.4
+
+    # 2. Electricity: 50 kWh grid
+    assert round(50.0 * factors["electricity.grid_kwh"], 3) == 41.0
+
+    # 3. Food: 10 non-veg meals
+    assert round(10.0 * factors["food.meal_non_veg"], 3) == 21.5
+
+    # 4. Shopping: 2 clothing items
+    assert round(2.0 * factors["shopping.clothing_item"], 3) == 17.0
+
+    # 5. Waste: 20 kg landfill waste
+    assert round(20.0 * factors["waste.landfill_kg"], 3) == 19.0
+
 def test_validation_plausibility_rules():
     # Valid bus trip
     status, score, reasons = validate_activity("transport", "transport.bus_km", 12.5, {"mode": "bus", "duration_min": 30})

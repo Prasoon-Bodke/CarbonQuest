@@ -1,0 +1,39 @@
+{
+  "request": {
+    "quantity": 20.0,
+    "metadata": {
+      "mode": "metro",
+      "duration_min": 35
+    }
+  },
+  "response": {
+    "activity": {
+      "id": "act-1234",
+      "category": "transport",
+      "activity_key": "transport.metro_km",
+      "quantity": 20.0,
+      "unit": "km",
+      "occurred_on": "2026-11-04",
+      "source": "manual",
+      "validation_status": "accepted",
+      "validation_score": 0.95,
+      "validation_reasons": []
+    },
+    "emission": {
+      "id": "em-5678",
+      "kg_co2e": 0.7,
+      "factor": {
+        "id": "fac-002",
+        "value": 0.035,
+        "unit": "kg CO2e/km",
+        "source_name": "Delhi Metro (DMRC) Clean Development Mechanism & CEA",
+        "source_year": 2023
+      },
+      "confidence": 0.85,
+      "confidence_reasons": [
+        "Emission factor region (IN) exactly matches user regional profile",
+        "Passed all physical plausibility and speed bounds"
+      ]
+    }
+  }
+}

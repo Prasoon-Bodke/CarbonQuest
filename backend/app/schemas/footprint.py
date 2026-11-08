@@ -17,9 +17,17 @@ class FootprintSummary(BaseModel):
     by_category: List[CategorySplit]
     previous_period_total_kg: Optional[float] = None
     change_pct: Optional[float] = None
+    target_kg: Optional[float] = None
+    target_used_pct: Optional[float] = None
     confidence: float
     confidence_label: str
     activity_count: int
+
+class HotspotOpportunity(BaseModel):
+    action_key: str
+    title: str
+    estimated_saving_kg_month: float
+    difficulty: int
 
 class HotspotItem(BaseModel):
     rank: int
@@ -29,6 +37,7 @@ class HotspotItem(BaseModel):
     share_pct: float
     vs_previous_pct: float
     why: str
+    top_opportunity: Optional[HotspotOpportunity] = None
 
 class FootprintHotspotsResponse(BaseModel):
     period: str

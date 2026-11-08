@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 
 class ProfilePreferences(BaseModel):
@@ -30,3 +30,24 @@ class ProfileUpdate(BaseModel):
 class ConsentUpdate(BaseModel):
     consent_tracking: bool
     consent_leaderboard: bool
+
+class HabitInput(BaseModel):
+    category: str
+    activity_key: str
+    frequency: str = "daily"  # "daily" or "weekly"
+    quantity: float = Field(gt=0)
+    unit: str
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+class OnboardingInput(BaseModel):
+    display_name: Optional[str] = None
+    age_band: Optional[str] = None
+    household_size: Optional[int] = 2
+    monthly_target_kg: Optional[float] = 100.0
+    preferences: Optional[Dict[str, Any]] = None
+    habits: List[HabitInput] = Field(default_factory=list)
+
+class OnboardingResponse(BaseModel):
+    status: str
+    activities_created: int
+    profile: ProfileRead

@@ -74,6 +74,17 @@ def seed():
                         is_active=act.get("is_active", True),
                     )
                     db.add(item)
+                else:
+                    existing.title = act["title"]
+                    existing.description = act["description"]
+                    existing.category = act["category"]
+                    existing.activity_key = act["activity_key"]
+                    existing.change_type = act["change_type"]
+                    existing.default_params = act["default_params"]
+                    existing.difficulty = act["difficulty"]
+                    existing.cost_level = act["cost_level"]
+                    existing.tags = act["tags"]
+                    existing.is_active = act.get("is_active", True)
         db.commit()
 
         # 3. Seed Badges from JSON
