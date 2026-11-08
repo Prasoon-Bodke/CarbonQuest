@@ -15,7 +15,13 @@ from app.core.config import settings
 import app.models # load all models
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+
+# Normalize standard PostgreSQL URI to psycopg v3 dialect for SQLAlchemy
+db_url = settings.DATABASE_URL
+if db_url.startswith("postgresql://") and "+psycopg" not in db_url:
+    db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+config.set_main_option("sqlalchemy.url", db_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
