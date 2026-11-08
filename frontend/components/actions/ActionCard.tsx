@@ -27,13 +27,29 @@ import {
   IndianRupee,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { RecommendationFeedbackRequest } from "@/types";
+
+type LocalAction = "accept" | "modify" | "skip" | "complete";
+type FeedbackAction = "accept" | "modify" | "skip" | "reject";
+
+// Map local action type to backend feedback type
+function mapActionToFeedback(local: LocalAction): FeedbackAction {
+  const map: Record<LocalAction, FeedbackAction> = {
+    accept: "accept",
+    modify: "modify",
+    skip: "skip",
+    complete: "accept", // Mark complete = accept the action as done
+  };
+  return map[local];
+}
 
 interface ActionCardProps {
   recommendation: ScoredRecommendation & { userStatus?: string };
   onStatusChange?: () => void;
+  onFeedback?: (recommendationId: string, responseType: FeedbackAction, reason?: string) => void;
 }
 
-export function ActionCard({ recommendation, onStatusChange }: ActionCardProps) {
+export function ActionCard({ recommendation, onStatusChange, onFeedback }: ActionCardProps) {
   const { toast } = useToast();
   const [isBreakdownOpen, setIsBreakdownOpen] = React.useState(false);
   const [isSkipModalOpen, setIsSkipModalOpen] = React.useState(false);
@@ -41,11 +57,32 @@ export function ActionCard({ recommendation, onStatusChange }: ActionCardProps) 
   const [modifiedMagnitude, setModifiedMagnitude] = React.useState(recommendation.userMagnitude);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const { template, estimatedKgPerMonth, estimatedCostSavingsInr, priorityScore, scoreBreakdown, rationale, userStatus } =
+  const { actionId, template, estimatedKgPerMonth, estimatedCostSavingsInr, priorityScore, scoreBreakdown, rationale, userStatus } =
     recommendation;
 
-  const handleAction = async (action: "accept" | "modify" | "skip" | "complete", reason?: string) => {
+  const handleAction = async (action: LocalAction, reason?: string) => {
     setIsLoading(true);
+
+    // Use the callback if provided (for proper API integration)
+    if (onFeedback && actionId) {
+      const feedbackAction = mapActionToFeedback(action);
+      await onFeedback(actionId, feedbackAction, reason);
+      setIsSkipModalOpen(false);
+      setIsModifyOpen(false);
+      if (onStatusChange) onStatusChange();
+
+      // Show success toast
+      const toastTitle = action === "skip" ? "Skipped" : action === "accept" || action === "complete" ? "Added to Plan" : "Updated";
+      const toastVariant = action === "skip" ? "info" : "success";
+      toast({
+        title: `Action ${toastTitle}`,
+        description: "Recommendation queue updated.",
+        variant: toastVariant,
+      });
+      return;
+    }
+
+    // Fallback to local action (for backward compatibility)
     try {
       const res = await fetch(`/api/actions/${template.slug}`, {
         method: "POST",

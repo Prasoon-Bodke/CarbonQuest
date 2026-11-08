@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
+import { authService } from "@/lib/supabase/client";
+import { api, ApiError } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,19 +18,61 @@ export default function LoginPage() {
   const [email, setEmail] = React.useState("demo@carbonquest.in");
   const [password, setPassword] = React.useState("demo123");
   const [isLoading, setIsLoading] = React.useState(false);
+  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
-  const handleLogin = (e?: React.FormEvent) => {
+  const handleCredentialsLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    setErrorMsg(null);
+    try {
+      await authService.signIn(email, password);
+      const profile = await api.profile.get();
       toast({
         title: "Signed in successfully",
-        description: "Welcome back to CarbonQuest!",
+        description: `Welcome back, ${profile.display_name || "explorer"}!`,
+        variant: "success",
+      });
+      if (profile.onboarding_done) {
+        router.push("/dashboard");
+      } else {
+        router.push("/onboarding");
+      }
+    } catch (err: any) {
+      const msg = err instanceof ApiError ? err.message : err.message || "Invalid credentials";
+      setErrorMsg(msg);
+      toast({
+        title: "Sign in failed",
+        description: msg,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      await authService.signInDemo();
+      const profile = await api.profile.get();
+      toast({
+        title: "Signed in as Demo User",
+        description: `Welcome, ${profile.display_name || "Aarav Sharma"} (Pune baseline)!`,
         variant: "success",
       });
       router.push("/dashboard");
-    }, 400);
+    } catch (err: any) {
+      const msg = err instanceof ApiError ? err.message : err.message || "Failed to sign in demo user";
+      setErrorMsg(msg);
+      toast({
+        title: "Demo sign in failed",
+        description: msg,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -56,6 +100,12 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {errorMsg && (
+            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs">
+              {errorMsg}
+            </div>
+          )}
+
           {/* Quick Demo Login Pill Button */}
           <div className="p-3.5 rounded-xl border border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-950/30 space-y-2">
             <div className="flex items-center justify-between">
@@ -70,7 +120,8 @@ export default function LoginPage() {
             </p>
             <Button
               type="button"
-              onClick={() => handleLogin()}
+              disabled={isLoading}
+              onClick={handleDemoLogin}
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 gap-1.5"
             >
               Sign In as Demo User (Aarav Sharma)
@@ -85,7 +136,7 @@ export default function LoginPage() {
             </span>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4 text-xs">
+          <form onSubmit={handleCredentialsLogin} className="space-y-4 text-xs">
             <div className="space-y-1.5">
               <label className="font-semibold text-foreground">Email Address</label>
               <Input
@@ -100,7 +151,7 @@ export default function LoginPage() {
             <div className="space-y-1.5">
               <div className="flex justify-between items-center">
                 <label className="font-semibold text-foreground">Password</label>
-                <a href="#" className="text-emerald-600 hover:underline">Forgot?</a>
+                <span className="text-[10px] text-muted-foreground">Min 6 characters</span>
               </div>
               <Input
                 type="password"

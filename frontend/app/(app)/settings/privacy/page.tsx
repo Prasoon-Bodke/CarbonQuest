@@ -6,21 +6,18 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { ShieldCheck, Download, Trash2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { api } from "@/lib/api";
 
 export default function PrivacySettingsPage() {
   const [consentTracking, setConsentTracking] = React.useState(true);
   const [consentLeaderboard, setConsentLeaderboard] = React.useState(true);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
 
-  const handleExportData = () => {
+  const handleExportData = async () => {
     setStatusMessage("Export requested. Preparing your complete JSON dataset archive...");
-    setTimeout(() => {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
-        user: "demo-user-pune",
-        profile: { region: "IN", household_size: 2 },
-        export_date: new Date().toISOString(),
-        note: "Complete self-sovereign carbon audit export"
-      }, null, 2));
+    try {
+      const exportData = await api.profile.exportData();
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
       const downloadAnchor = document.createElement("a");
       downloadAnchor.setAttribute("href", dataStr);
       downloadAnchor.setAttribute("download", "carbonquest_user_data.json");
@@ -28,12 +25,19 @@ export default function PrivacySettingsPage() {
       downloadAnchor.click();
       downloadAnchor.remove();
       setStatusMessage("Export downloaded successfully.");
-    }, 800);
+    } catch {
+      setStatusMessage("Export failed. Please try again.");
+    }
   };
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
     if (confirm("Are you sure you want to permanently delete your account and all carbon activity records? This action cannot be undone.")) {
-      setStatusMessage("Delete signal sent to FastAPI. Account and records purged.");
+      try {
+        await api.profile.deleteData();
+        setStatusMessage("Account and all carbon records permanently deleted.");
+      } catch {
+        setStatusMessage("Delete request failed. Please try again.");
+      }
     }
   };
 

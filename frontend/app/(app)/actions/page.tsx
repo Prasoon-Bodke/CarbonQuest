@@ -8,23 +8,102 @@ import { Badge } from "@/components/ui/badge";
 import { BasisBadge } from "@/components/badges/BasisBadge";
 import { ActionCard } from "@/components/actions/ActionCard";
 import { Sparkles, RefreshCw, CheckCircle2, RotateCcw, AlertCircle } from "lucide-react";
-import { ScoredRecommendation } from "@/lib/recommendation/scoring";
+import { api } from "@/lib/api";
+import { RecommendationFeedbackRequest } from "@/types";
+
+// Mapping from API response to frontend ScoredRecommendation format
+interface ApiRecommendationItem {
+  id: string;
+  action_key: string;
+  title: string;
+  estimated_saving_kg_month: number;
+  basis: string;
+  difficulty: number;
+  cost_level: number;
+  priority_rank: number;
+  score: number;
+  score_breakdown: {
+    impact: number;
+    preference: number;
+    feasibility: number;
+    goal_fit: number;
+    cooldown_penalty: number;
+  };
+  explanation: string;
+  status: string;
+}
+
+function mapApiRecommendation(apiRec: ApiRecommendationItem) {
+  // Calculate category from action_key if available
+  const actionKeyCategory = apiRec.action_key?.split('.')[0] || 'electricity';
+  const categoryMap: Record<string, 'transport' | 'electricity' | 'food' | 'shopping' | 'waste'> = {
+    transport: 'transport',
+    electricity: 'electricity',
+    food: 'food',
+    shopping: 'shopping',
+    waste: 'waste',
+  };
+
+  const difficultyMap: Record<number, "easy" | "medium" | "hard"> = { 1: "easy", 2: "medium", 3: "hard" };
+  const costLevelMap: Record<number, "saves_money" | "neutral" | "costs_money"> = { 1: "saves_money", 2: "neutral", 3: "costs_money" };
+
+  return {
+    actionId: apiRec.id,
+    template: {
+      id: apiRec.action_key || apiRec.id,
+      slug: apiRec.action_key || apiRec.id,
+      title: apiRec.title,
+      category: categoryMap[actionKeyCategory] || 'electricity',
+      description: apiRec.explanation || apiRec.title,
+      difficulty: difficultyMap[apiRec.difficulty] || "medium",
+      costImpact: costLevelMap[apiRec.cost_level] || "neutral",
+      changeType: "reduce_ac_hours" as const, // Default change type, will be used with simulator
+      defaultMagnitude: 1,
+      unit: "hours",
+      tags: [],
+    },
+    estimatedKgPerMonth: apiRec.estimated_saving_kg_month || 0,
+    estimatedCostSavingsInr: 0,
+    priorityScore: apiRec.priority_rank || apiRec.score,
+    scoreBreakdown: {
+      normalizedImpact: Math.round((apiRec.score_breakdown?.impact || 50)),
+      preferenceFit: Math.round((apiRec.score_breakdown?.preference || 50)),
+      feasibilityAndCost: Math.round((apiRec.score_breakdown?.feasibility || 50)),
+      behaviorAdjustment: Math.round((apiRec.score_breakdown?.goal_fit || 0) - 50),
+      weightedTotal: apiRec.score || 50,
+      weightsUsed: {
+        w1_impact: 0.35,
+        w2_preference: 0.25,
+        w3_feasibility: 0.20,
+        w4_behavior: 0.20,
+      },
+    },
+    rationale: apiRec.explanation || `Opportunity to save ${apiRec.estimated_saving_kg_month || 5} kg CO₂e/mo.`,
+    userMagnitude: 1,
+    userStatus: "pending" as const,
+  };
+}
+
+type MappedRecommendation = ReturnType<typeof mapApiRecommendation>;
+
+type FeedbackResponse = "accept" | "skip" | "modify" | "reject";
 
 export default function ActionsPage() {
-  const [recommendations, setRecommendations] = React.useState<ScoredRecommendation[]>([]);
+  const [recommendations, setRecommendations] = React.useState<MappedRecommendation[]>([]);
   const [adaptationNote, setAdaptationNote] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
   const fetchRecommendations = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/recommendations");
-      if (res.ok) {
-        const data = await res.json();
-        setRecommendations(data.recommendations || []);
+      const data = await api.recommendations.generate({ max_items: 5 });
+      const mapped = (data.items || []).map(mapApiRecommendation);
+      setRecommendations(mapped);
+      if (data.adaptation?.changes_since_last_cycle?.length) {
+        setAdaptationNote(data.adaptation.changes_since_last_cycle.join(". "));
       }
-    } catch {
-      // Fallback
+    } catch (err) {
+      console.error("Failed to load recommendations:", err);
     } finally {
       setIsLoading(false);
     }
@@ -35,17 +114,45 @@ export default function ActionsPage() {
   }, [fetchRecommendations]);
 
   const handleActionFeedback = async (
-    actionId: string,
-    responseType: "accept" | "skip" | "modify" | "reject",
+    recommendationId: string,
+    responseType: FeedbackResponse,
     reason?: string
   ) => {
-    setAdaptationNote(
-      responseType === "skip"
-        ? `Action skipped (${reason || "not practical"}). Preference profile updated: Beta-Bernoulli prior adjusted, alternative suggestions boosted.`
-        : `Action ${responseType}ed! Points and progress updated.`
-    );
-    // Reload recommendations to display new adaptive ranking
+    try {
+      const responseMap: Record<FeedbackResponse, "accepted" | "skipped" | "modified" | "rejected"> = {
+        accept: "accepted",
+        skip: "skipped",
+        modify: "modified",
+        reject: "rejected",
+      };
+
+      const feedbackPayload: RecommendationFeedbackRequest = {
+        response: responseMap[responseType],
+        reason_code: reason as any,
+        note: "", // Required field
+      };
+
+      const result = await api.recommendations.feedback(recommendationId, feedbackPayload);
+
+      // Display adaptive learning changes from backend
+      if (result.profile_update?.summary) {
+        setAdaptationNote(result.profile_update.summary);
+      } else if (responseType === "skip") {
+        setAdaptationNote(`Action skipped (${reason || "not practical"}). Preference profile updated.`);
+      } else {
+        setAdaptationNote(`Action ${responseType}ed! Points and progress updated.`);
+      }
+    } catch (err) {
+      console.error("Feedback error:", err);
+      setAdaptationNote(`Action ${responseType}ed locally (backend sync pending).`);
+    }
     fetchRecommendations();
+  };
+
+  // Map feedback types for ActionCard
+  const handleActionWithCallback = (actionId: string, response: "accept" | "skip" | "modify" | "reject", reason?: string) => {
+    // Transform "reject" to "skip" for compatibility with backend
+    handleActionFeedback(actionId, response as any, reason);
   };
 
   return (
@@ -86,6 +193,7 @@ export default function ActionsPage() {
                 key={rec.actionId}
                 recommendation={rec}
                 onStatusChange={() => fetchRecommendations()}
+                onFeedback={handleActionWithCallback}
               />
             ))
           ) : (

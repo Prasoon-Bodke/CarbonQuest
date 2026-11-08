@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTheme } from "next-themes";
-import { Sun, Moon, MapPin, Sparkles, User, RefreshCw } from "lucide-react";
+import { Sun, Moon, MapPin, Sparkles, User, RefreshCw, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,31 +13,32 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/hooks/useAuth";
 
 export function Topbar({ title, subtitle }: { title?: string; subtitle?: string }) {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
-  const [currentUser, setCurrentUser] = React.useState("Aarav Sharma");
+  const { profile, logout, loginDemo } = useAuth();
 
-  const handleSwitchUser = async (userId: string, name: string) => {
+  const displayName = profile?.display_name || "Aarav Sharma";
+
+  const handleSwitchToDemo = async () => {
     try {
-      const res = await fetch("/api/auth/switch-demo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
+      await loginDemo();
+      toast({
+        title: "Switched to Demo Account",
+        description: "Aarav Sharma (Pune baseline ~128 kg CO₂e) loaded.",
+        variant: "success",
       });
-      if (res.ok) {
-        setCurrentUser(name);
-        toast({
-          title: `Switched demo profile to ${name}`,
-          description: "All footprints, recommendations, and streaks updated.",
-          variant: "success",
-        });
-        window.location.reload();
-      }
+      window.location.reload();
     } catch {
       toast({ title: "Failed to switch user", variant: "destructive" });
     }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    window.location.href = "/login";
   };
 
   return (
@@ -58,34 +59,29 @@ export function Topbar({ title, subtitle }: { title?: string; subtitle?: string 
           <span>Pune, India (CEA Grid v19)</span>
         </div>
 
-        {/* Demo Switcher */}
+        {/* User Menu & Demo Switcher */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-8 gap-2 text-xs">
               <User className="h-3.5 w-3.5 text-emerald-600" />
-              <span className="hidden md:inline">{currentUser}</span>
+              <span className="hidden md:inline">{displayName}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>Demo Profiles (Grand Challenge)</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs">
+              Signed in as <span className="font-bold">{displayName}</span>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => handleSwitchUser("user_demo_primary", "Aarav Sharma")}>
+            <DropdownMenuItem onClick={handleSwitchToDemo}>
               <div className="flex flex-col">
                 <span className="font-semibold text-xs">Aarav Sharma (Primary Demo)</span>
-                <span className="text-[10px] text-muted-foreground">~128 kg CO₂e baseline • 90d history</span>
+                <span className="text-[10px] text-muted-foreground">~128 kg CO₂e baseline • 8-week history</span>
               </div>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSwitchUser("user_demo_priya", "Priya Patil")}>
-              <div className="flex flex-col">
-                <span className="font-semibold text-xs">Priya Patil (Rank #1)</span>
-                <span className="text-[10px] text-muted-foreground">Eco Score 84 • PCCOE Green Club</span>
-              </div>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSwitchUser("user_demo_rohit", "Rohit Deshmukh")}>
-              <div className="flex flex-col">
-                <span className="font-semibold text-xs">Rohit Deshmukh</span>
-                <span className="text-[10px] text-muted-foreground">Eco Score 68 • VIT Pune</span>
-              </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout} className="text-rose-600 focus:text-rose-700 cursor-pointer">
+              <LogOut className="h-3.5 w-3.5 mr-2" />
+              <span className="text-xs font-medium">Sign Out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

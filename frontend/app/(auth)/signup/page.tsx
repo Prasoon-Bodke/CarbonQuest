@@ -7,8 +7,9 @@ import { Leaf, ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
+import { authService } from "@/lib/supabase/client";
+import { ApiError } from "@/lib/api";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -17,19 +18,40 @@ export default function SignupPage() {
   const [email, setEmail] = React.useState("aarav.pune@vit.edu");
   const [password, setPassword] = React.useState("password123");
   const [isLoading, setIsLoading] = React.useState(false);
+  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    setErrorMsg(null);
+    try {
+      const res = await authService.signUp(email, password, name);
+      if (res.requiresConfirmation) {
+        toast({
+          title: "Account Created",
+          description: "Please check your email to confirm your account, then sign in.",
+          variant: "success",
+        });
+        router.push("/login");
+      } else {
+        toast({
+          title: "Account Created",
+          description: "Proceeding to your initial carbon audit onboarding...",
+          variant: "success",
+        });
+        router.push("/onboarding");
+      }
+    } catch (err: any) {
+      const msg = err instanceof ApiError ? err.message : err.message || "Failed to create account";
+      setErrorMsg(msg);
       toast({
-        title: "Account Created",
-        description: "Proceeding to your initial carbon audit onboarding...",
-        variant: "success",
+        title: "Registration Failed",
+        description: msg,
+        variant: "destructive",
       });
-      router.push("/onboarding");
-    }, 400);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -56,6 +78,12 @@ export default function SignupPage() {
               Begin your journey from carbon awareness to measurable climate impact
             </p>
           </div>
+
+          {errorMsg && (
+            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs">
+              {errorMsg}
+            </div>
+          )}
 
           <form onSubmit={handleSignup} className="space-y-4 text-xs">
             <div className="space-y-1.5">
@@ -86,7 +114,8 @@ export default function SignupPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 8 characters"
+                placeholder="At least 6 characters"
+                minLength={6}
                 required
               />
             </div>

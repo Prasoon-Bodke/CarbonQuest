@@ -22,59 +22,329 @@ import {
   Sparkles,
   TreePine,
   Car,
-  Clock,
+  Zap,
   ArrowRight,
   BotMessageSquare,
-  HelpCircle,
-  Zap,
 } from "lucide-react";
+import { api } from "@/lib/api";
+import { RecommendationItem } from "@/types";
+import { LineItemCalculation, CarbonCategory } from "@/lib/carbon/types";
+import { CategorySplit } from "@/types";
+import { RecommendationFeedbackRequest } from "@/types";
 import { ScoredRecommendation } from "@/lib/recommendation/scoring";
-import { LineItemCalculation } from "@/lib/carbon/types";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+// Category to display name mapping
+const CATEGORY_LABELS: Record<CarbonCategory, string> = {
+  transport: "Transport",
+  electricity: "Electricity",
+  food: "Food",
+  shopping: "Shopping",
+  waste: "Waste",
+};
+
+// Category to activity key mapping for hotspots
+const CATEGORY_ACTIVITY_KEY: Record<string, { label: string; defaultActivityKey: string }> = {
+  transport: { label: "Transport", defaultActivityKey: "transport.bus_km" },
+  electricity: { label: "Electricity", defaultActivityKey: "electricity.grid_kwh" },
+  food: { label: "Food", defaultActivityKey: "food.meal_veg" },
+  shopping: { label: "Shopping", defaultActivityKey: "shopping.clothing_item" },
+  waste: { label: "Waste", defaultActivityKey: "waste.landfill_kg" },
+};
+
+// Severity classification based on rank
+function getSeverity(rank: number, sharePct: number): "high" | "medium" | "low" {
+  if (rank <= 2 || sharePct > 25) return "high";
+  if (rank <= 3 || sharePct > 15) return "medium";
+  return "low";
+}
+
+// Map API recommendation to ScoredRecommendation format
+function mapRecommendationItem(apiRec: RecommendationItem): ScoredRecommendation {
+  const difficultyMap: Record<number, "easy" | "medium" | "hard"> = { 1: "easy", 2: "medium", 3: "hard" };
+  const costLevelMap: Record<number, "saves_money" | "neutral" | "costs_money"> = { 1: "saves_money", 2: "neutral", 3: "costs_money" };
+
+  const actionKeyCategory = apiRec.action_key?.split('.')[0] || 'electricity';
+  const categoryMap: Record<string, CarbonCategory> = {
+    transport: 'transport',
+    electricity: 'electricity',
+    food: 'food',
+    shopping: 'shopping',
+    waste: 'waste',
+  };
+
+  return {
+    actionId: apiRec.id,
+    template: {
+      id: apiRec.action_key || apiRec.id,
+      slug: apiRec.action_key || apiRec.id,
+      title: apiRec.title,
+      category: categoryMap[actionKeyCategory] || 'electricity',
+      description: apiRec.explanation || apiRec.title,
+      difficulty: difficultyMap[apiRec.difficulty] || "medium",
+      costImpact: costLevelMap[apiRec.cost_level] || "neutral",
+      changeType: "reduce_ac_hours" as const,
+      defaultMagnitude: 1,
+      unit: "hours",
+      tags: [],
+    },
+    estimatedKgPerMonth: apiRec.estimated_saving_kg_month || 0,
+    estimatedCostSavingsInr: 0,
+    priorityScore: apiRec.priority_rank || apiRec.score,
+    scoreBreakdown: {
+      normalizedImpact: Math.round((apiRec.score_breakdown?.impact || 50)),
+      preferenceFit: Math.round((apiRec.score_breakdown?.preference || 50)),
+      feasibilityAndCost: Math.round((apiRec.score_breakdown?.feasibility || 50)),
+      behaviorAdjustment: Math.round((apiRec.score_breakdown?.goal_fit || 0) - 50),
+      weightedTotal: apiRec.score || 50,
+      weightsUsed: {
+        w1_impact: 0.35,
+        w2_preference: 0.25,
+        w3_feasibility: 0.20,
+        w4_behavior: 0.20,
+      },
+    },
+    rationale: apiRec.explanation || `Opportunity to save ${apiRec.estimated_saving_kg_month || 5} kg CO₂e/mo.`,
+    userMagnitude: 1,
+  } as ScoredRecommendation;
+}
+
+// Query keys for consistent invalidation
+const queryKeys = {
+  footprint: ["footprint", "summary"] as const,
+  footprintTimeseries: ["footprint", "timeseries"] as const,
+  recommendations: ["recommendations", "list"] as const,
+  impact: ["impact", "summary"] as const,
+  rewards: ["rewards", "summary"] as const,
+  hotspots: ["footprint", "hotspots"] as const,
+};
 
 export default function DashboardPage() {
-  const [footprint, setFootprint] = React.useState<any>(null);
-  const [history, setHistory] = React.useState<any[]>([]);
-  const [recommendations, setRecommendations] = React.useState<ScoredRecommendation[]>([]);
-  const [progressSummary, setProgressSummary] = React.useState<any>(null);
-  const [rewardsSummary, setRewardsSummary] = React.useState<any>(null);
-  const [explainData, setExplainData] = React.useState<any>(null);
+  const queryClient = useQueryClient();
   const [isExplainOpen, setIsExplainOpen] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [adaptationNote, setAdaptationNote] = React.useState<string | null>(null);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = React.useState<string | null>(null);
 
-  const loadData = React.useCallback(async () => {
-    try {
-      const [fpRes, histRes, recRes, progRes, rewRes, expRes] = await Promise.all([
-        fetch("/api/footprint/current"),
-        fetch("/api/footprint/history"),
-        fetch("/api/recommendations"),
-        fetch("/api/progress/summary"),
-        fetch("/api/rewards/summary"),
-        fetch("/api/footprint/explain"),
-      ]);
+  // Fetch all dashboard data using TanStack Query
+  const { data: footprint, isLoading: footprintLoading, error: footprintError } = useQuery({
+    queryKey: queryKeys.footprint,
+    queryFn: () => api.footprint.summary(),
+    staleTime: 60 * 1000,
+  });
 
-      if (fpRes.ok) setFootprint(await fpRes.json());
-      if (histRes.ok) {
-        const hData = await histRes.json();
-        setHistory(hData.history || []);
-      }
-      if (recRes.ok) {
-        const rData = await recRes.json();
-        setRecommendations(rData.recommendations || []);
-      }
-      if (progRes.ok) setProgressSummary(await progRes.json());
-      if (rewRes.ok) setRewardsSummary(await rewRes.json());
-      if (expRes.ok) setExplainData(await expRes.json());
-    } catch (err) {
-      console.error("Dashboard data load error:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const { data: historyData, isLoading: historyLoading } = useQuery({
+    queryKey: queryKeys.footprintTimeseries,
+    queryFn: () => api.footprint.timeseries(),
+    staleTime: 60 * 1000,
+  });
 
-  React.useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const { data: recommendationsData, isLoading: recsLoading } = useQuery({
+    queryKey: queryKeys.recommendations,
+    queryFn: () => api.recommendations.list(),
+    staleTime: 60 * 1000,
+  });
+
+  const { data: progressSummary, isLoading: progressLoading } = useQuery({
+    queryKey: queryKeys.impact,
+    queryFn: () => api.impact.summary(),
+    staleTime: 60 * 1000,
+  });
+
+  const { data: rewardsSummary, isLoading: rewardsLoading } = useQuery({
+    queryKey: queryKeys.rewards,
+    queryFn: () => api.rewards.summary(),
+    staleTime: 60 * 1000,
+  });
+
+  const { data: hotspotsData, isLoading: hotspotsLoading } = useQuery({
+    queryKey: queryKeys.hotspots,
+    queryFn: () => api.footprint.hotspots({ top_n: 5 }),
+    staleTime: 60 * 1000,
+  });
+
+  const isLoading = footprintLoading || historyLoading || recsLoading || progressLoading || rewardsLoading || hotspotsLoading;
+
+  // Map recommendations
+  const recommendations = React.useMemo(() => {
+    if (!recommendationsData) return [];
+    const rData = recommendationsData as any;
+    const items = Array.isArray(rData) ? rData : (rData?.recommendations || []);
+    return items.map(mapRecommendationItem);
+  }, [recommendationsData]);
+
+  // Convert hotspots API response to component format
+  const hotspots: HotspotItem[] = React.useMemo(() => {
+    if (!hotspotsData) return [];
+    return (hotspotsData?.hotspots ?? []).map((h: any) => ({
+      rank: h.rank,
+      category: h.category,
+      lineItem: CATEGORY_ACTIVITY_KEY[h.category]?.label?.replace(/([A-Z])/g, ' $1').trim() || h.activity_key,
+      kg: h.kg_co2e,
+      percent: h.share_pct,
+      severity: getSeverity(h.rank, h.share_pct),
+    })) as any[];
+  }, [hotspotsData]);
+
+  // Format history data
+  const history = React.useMemo(() => {
+    if (!historyData) return [];
+    const hData = historyData as any;
+    return hData?.series || [];
+  }, [historyData]);
+
+  // Feedback handler for ActionCard with mutation
+  const feedbackMutation = useMutation({
+    mutationFn: async ({
+      recommendationId,
+      responseType,
+      reason,
+    }: {
+      recommendationId: string;
+      responseType: "accept" | "skip" | "modify" | "reject";
+      reason?: string;
+    }) => {
+      const responseMap: Record<typeof responseType, "accepted" | "skipped" | "modified" | "rejected"> = {
+        accept: "accepted",
+        skip: "skipped",
+        modify: "modified",
+        reject: "rejected",
+      };
+
+      const feedbackPayload: RecommendationFeedbackRequest = {
+        response: responseMap[responseType],
+        reason_code: reason as any,
+        note: "",
+      };
+
+      return api.recommendations.feedback(recommendationId, feedbackPayload);
+    },
+    onSuccess: (result) => {
+      if (result.profile_update?.summary) {
+        setAdaptationNote(result.profile_update.summary);
+      }
+      // Invalidate relevant queries to refresh dashboard
+      queryClient.invalidateQueries({ queryKey: queryKeys.recommendations });
+      queryClient.invalidateQueries({ queryKey: queryKeys.footprint });
+      queryClient.invalidateQueries({ queryKey: queryKeys.hotspots });
+      queryClient.invalidateQueries({ queryKey: queryKeys.rewards });
+    },
+    onError: (err) => {
+      console.error("Feedback error:", err);
+      setAdaptationNote(`Action failed - please try again.`);
+    },
+  });
+
+  const handleRecommendationFeedback = (
+    recommendationId: string,
+    responseType: "accept" | "skip" | "modify" | "reject",
+    reason?: string
+  ) => {
+    feedbackMutation.mutate({ recommendationId, responseType, reason });
+  };
+
+  // Mutation for activity creation (to refresh dashboard after logging)
+  const createActivityMutation = useMutation({
+    mutationFn: (payload: any) => api.activities.create(payload),
+    onSuccess: () => {
+      // Invalidate all dashboard-relevant queries
+      queryClient.invalidateQueries({ queryKey: queryKeys.footprint });
+      queryClient.invalidateQueries({ queryKey: queryKeys.footprintTimeseries });
+      queryClient.invalidateQueries({ queryKey: queryKeys.hotspots });
+      queryClient.invalidateQueries({ queryKey: queryKeys.recommendations });
+      queryClient.invalidateQueries({ queryKey: queryKeys.impact });
+      queryClient.invalidateQueries({ queryKey: queryKeys.rewards });
+    },
+  });
+
+  // Mutation for simulation (to refresh dashboard after simulation)
+  const runSimulationMutation = useMutation({
+    mutationFn: (payload: any) => api.simulations.project(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.footprint });
+      queryClient.invalidateQueries({ queryKey: queryKeys.recommendations });
+    },
+  });
+
+  // Build explain data for drawer from footprint
+  const buildExplainData = React.useCallback((): any => {
+    if (!footprint) return { lineItems: [], confidenceScore: 82, confidenceExplanation: [] };
+
+    const categoryTotals: Record<string, number> = {};
+    (footprint.by_category ?? []).forEach((c: CategorySplit) => {
+      categoryTotals[c.category] = c.kg_co2e;
+    });
+
+    const lineItems: LineItemCalculation[] = Object.entries(categoryTotals).map(([cat, kg], idx) => ({
+      id: `cat-${idx}`,
+      category: cat as CarbonCategory,
+      lineItem: CATEGORY_LABELS[cat as CarbonCategory],
+      activity: kg,
+      unit: "kg CO2e",
+      factor: 0.5,
+      factorSource: "Emission Factor Database",
+      factorYear: 2023,
+      co2eKg: kg,
+      dataQuality: "estimated" as const,
+      formulaText: `Category Total: ${kg.toFixed(2)} kg CO2e`,
+    }));
+
+    return {
+      lineItems,
+      confidenceScore: footprint.confidence ?? 82,
+      confidenceExplanation: [
+        `Based on ${footprint.activity_count} logged activities`,
+        `Data spans current ${footprint.period} period`,
+        `Formula: Activity Amount × Emission Factor`,
+      ],
+    };
+  }, [footprint]);
+
+  const explainDataForDrawer = buildExplainData();
+
+  // Featured Next Best Action
+  const nextBestAction = recommendations[0];
+
+  // Calculate derived values
+  const totalKg = footprint?.total_kg_co2e ?? 0;
+  const byCategory = footprint?.by_category ?? [];
+  const deltaKg = footprint?.previous_period_total_kg
+    ? totalKg - footprint.previous_period_total_kg
+    : 0;
+
+  // Formatted slices for donut
+  const categoryMap: Record<string, CategorySplit> = {};
+  byCategory.forEach((c: CategorySplit) => {
+    categoryMap[c.category] = c;
+  });
+
+  const donutData = (Object.keys(CATEGORY_LABELS) as CarbonCategory[]).map((cat) => {
+    const catData = categoryMap[cat] || { category: cat, kg_co2e: 0, share_pct: 0 };
+    return {
+      name: CATEGORY_LABELS[cat],
+      category: cat,
+      value: catData.kg_co2e,
+      percentage: catData.share_pct,
+      color: cat === "transport" ? "#2563eb" :
+              cat === "electricity" ? "#f59e0b" :
+              cat === "food" ? "#059669" :
+              cat === "shopping" ? "#8b5cf6" :
+              "#dc2626",
+    };
+  });
+
+  // Trend data formatted for AreaChart from timeseries API
+  const trendData = history.length > 0
+    ? history.map((h: { label: string; total_kg?: number }) => ({
+        month: h.label.split(' ')[0],
+        actualKg: totalKg,
+        goalPathKg: totalKg,
+        projectedIfPlanFollowed: h.total_kg || totalKg,
+      }))
+    : [
+        { month: "Sep", actualKg: 148.5, goalPathKg: 148.5, projectedIfPlanFollowed: 130.0 },
+        { month: "Oct", actualKg: 139.0, goalPathKg: 138.0, projectedIfPlanFollowed: 120.5 },
+        { month: "Nov", actualKg: totalKg, goalPathKg: 127.6, projectedIfPlanFollowed: 109.1 },
+      ];
 
   if (isLoading) {
     return (
@@ -93,37 +363,22 @@ export default function DashboardPage() {
     );
   }
 
-  const totalKg = footprint?.totalKg || 127.6;
-  const categories = footprint?.byCategory || {};
-
-  // Formatted slices for donut
-  const donutData = Object.entries(categories).map(([key, val]: [string, any]) => ({
-    name: key.charAt(0).toUpperCase() + key.slice(1),
-    category: key,
-    value: val.co2eKg || 0,
-    percentage: val.percentage || 0,
-    color: "#10b981",
-  }));
-
-  // Trend data formatted for AreaChart
-  const trendData =
-    progressSummary?.trendCurve || [
-      { month: "Sep", actualKg: 148.5, goalPathKg: 148.5, projectedIfPlanFollowed: 130.0 },
-      { month: "Oct", actualKg: 139.0, goalPathKg: 138.0, projectedIfPlanFollowed: 120.5 },
-      { month: "Nov", actualKg: totalKg, goalPathKg: 127.6, projectedIfPlanFollowed: 109.1 },
-    ];
-
-  // Hotspots
-  const hotspots: HotspotItem[] = footprint?.hotspots || [
-    { rank: 1, category: "transport", lineItem: "Two-Wheeler Commute (Petrol)", kg: 39.7, percent: 31.1, severity: "high" },
-    { rank: 2, category: "electricity", lineItem: "Air Conditioning (Split AC)", kg: 32.1, percent: 25.1, severity: "high" },
-    { rank: 3, category: "food", lineItem: "Dietary Baseline (Vegetarian)", kg: 28.0, percent: 21.9, severity: "medium" },
-    { rank: 4, category: "shopping", lineItem: "Clothing & Fast Fashion", kg: 17.7, percent: 13.9, severity: "low" },
-    { rank: 5, category: "waste", lineItem: "Unsegregated Landfill Waste", kg: 10.1, percent: 7.9, severity: "low" },
-  ];
-
-  // Featured Next Best Action
-  const nextBestAction = recommendations[0];
+  // Error state
+  if (footprintError) {
+    return (
+      <AppShell title="Dashboard" subtitle="Audited Sustainability Overview">
+        <div className="p-6 max-w-5xl mx-auto space-y-6">
+          <div className="p-4 bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 rounded-lg">
+            <h3 className="font-semibold">Failed to load dashboard data</h3>
+            <p className="text-sm mt-1">{footprintError instanceof Error ? footprintError.message : "Unknown error"}</p>
+            <Button variant="outline" className="mt-3" onClick={() => queryClient.invalidateQueries({ queryKey: queryKeys.footprint })}>
+              Retry
+            </Button>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell
@@ -136,32 +391,32 @@ export default function DashboardPage() {
           title="Monthly Footprint"
           value={totalKg.toFixed(1)}
           unit="kg CO₂e"
-          delta={{ value: -8.2, isPositiveGood: false, label: "vs last month" }}
+          delta={{ value: deltaKg, isPositiveGood: deltaKg < 0, label: footprint?.previous_period_total_kg ? "vs last month" : "vs baseline" }}
           subtitle="Pune Average: 145 kg"
           icon={PieChart}
           accentColor="text-emerald-600"
         />
 
         <StatCard
-          title="Goal Progress (-20%)"
-          value={`${progressSummary?.progressPercent || 72}%`}
-          subtitle={`Target: ${progressSummary?.targetKg || 118.8} kg`}
+          title="Goal Progress"
+          value={`${footprint?.target_used_pct?.toFixed(0) ?? 72}%`}
+          subtitle={`Target: ${footprint?.target_kg ?? 118.8} kg | ${footprint?.activity_count ?? 0} activities logged`}
           icon={TrendingDown}
           accentColor="text-blue-600"
         />
 
         <StatCard
           title="Consistency Streak"
-          value={`${rewardsSummary?.currentStreak || 14} Days`}
-          subtitle={`Best: ${rewardsSummary?.longestStreak || 21} days`}
+          value={`${rewardsSummary?.streaks?.logging?.current ?? 14} Days`}
+          subtitle={`Best: ${rewardsSummary?.streaks?.logging?.longest ?? 21} days`}
           icon={Flame}
           accentColor="text-amber-500"
         />
 
         <StatCard
           title="Eco Score Rating"
-          value={`${rewardsSummary?.ecoScore || 76}/100`}
-          subtitle={rewardsSummary?.level || "Carbon Strategist"}
+          value={`${rewardsSummary?.eco_score ?? 76}/100`}
+          subtitle="Carbon Strategist"
           icon={Award}
           accentColor="text-purple-600"
         />
@@ -169,8 +424,8 @@ export default function DashboardPage() {
 
       {/* 2. Confidence Banner */}
       <ConfidenceMeter
-        score={footprint?.confidence || 82}
-        rating={footprint?.confidenceRating || "high"}
+        score={footprint?.confidence ?? 82}
+        rating={(footprint?.confidence_label?.toLowerCase() as "high" | "medium" | "low") ?? "high"}
         onOpenExplainability={() => setIsExplainOpen(true)}
       />
 
@@ -201,11 +456,11 @@ export default function DashboardPage() {
                 Emission Trajectory
               </h4>
               <p className="text-xs text-foreground font-bold mt-0.5">
-                Actual vs -20% Goal Path vs Projected-If-Plan-Followed
+                Actual vs Goal Path vs Projected-If-Plan-Followed
               </p>
             </div>
             <Badge variant="emerald" className="text-[10px]">
-              -14.1 kg Saved Since Sep
+              {footprint?.change_pct ? `${footprint.change_pct >= 0 ? '+' : ''}${footprint.change_pct}% from prev` : 'Tracking baseline'}
             </Badge>
           </div>
           <TrendAreaChart data={trendData} />
@@ -243,35 +498,77 @@ export default function DashboardPage() {
           {nextBestAction && (
             <ActionCard
               recommendation={nextBestAction}
-              onStatusChange={() => loadData()}
+              onStatusChange={() => {
+                queryClient.invalidateQueries({ queryKey: queryKeys.recommendations });
+                queryClient.invalidateQueries({ queryKey: queryKeys.footprint });
+              }}
+              onFeedback={handleRecommendationFeedback}
             />
           )}
 
-          {/* AI Grounded Insight Strip */}
-          <Card className="border-border/80 bg-muted/30">
-            <CardContent className="p-4 flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 shrink-0">
-                <BotMessageSquare className="h-4 w-4" />
-              </div>
-              <div className="text-xs space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-foreground">AI Sustainability Advisory</span>
-                  <Badge variant="outline" className="text-[9px]">Grounded in CEA v19 Data</Badge>
+          {/* Closed-Loop Adaptation Feedback Display */}
+          {adaptationNote && (
+            <Card className="border-emerald-500/30 bg-emerald-500/10">
+              <CardContent className="p-4 flex items-start gap-3 text-sm">
+                <Sparkles className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold text-emerald-800 dark:text-emerald-300">Closed-Loop Update: </span>
+                  {adaptationNote}
                 </div>
-                <p className="text-muted-foreground leading-relaxed">
-                  Your top hotspot is <strong>Two-Wheeler Commute (39.7 kg, 31.1%)</strong> followed by{" "}
-                  <strong>Air Conditioning (32.1 kg, 25.1%)</strong>. Because you skipped cycling as impractical,
-                  we calibrated your queue to prioritize Pune municipal transit. Setting your AC to 24°C will save ~₹350/mo.
-                </p>
-                <Link
-                  href="/assistant"
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:underline pt-0.5"
-                >
-                  Chat with grounded Llama 3.3 Assistant <ArrowRight className="h-3 w-3" />
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* AI Grounded Insight Strip - using actual hotspot data */}
+          {hotspots.length > 0 && hotspots[0] ? (
+            <Card className="border-border/80 bg-muted/30">
+              <CardContent className="p-4 flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 shrink-0">
+                  <BotMessageSquare className="h-4 w-4" />
+                </div>
+                <div className="text-xs space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-foreground">AI Sustainability Advisory</span>
+                    <Badge variant="outline" className="text-[9px]">Grounded in CEA v19 Data</Badge>
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Your top hotspot is <strong>{hotspots[0].lineItem} ({hotspots[0].kg.toFixed(1)} kg, {hotspots[0].percent.toFixed(1)}%)</strong> followed by{" "}
+                    {hotspots.length > 1 ? (
+                      <strong>{hotspots[1].lineItem} ({hotspots[1].kg.toFixed(1)} kg, {hotspots[1].percent.toFixed(1)}%)</strong>
+                    ) : (
+                      <strong>other categories</strong>
+                    )}. Based on your logged activities, consider optimizing these areas.
+                    {hotspots[0].category === "transport" && " Switching to public transit can save significant emissions."}
+                    {hotspots[0].category === "electricity" && " Reducing AC hours or shifting to solar offsets can help."}
+                    {hotspots[0].category === "food" && " Shifting toward plant-based meals reduces emissions significantly."}
+                  </p>
+                  <Link
+                    href="/actions"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:underline pt-0.5"
+                  >
+                    View action plan <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-border/80 bg-muted/30">
+              <CardContent className="p-4 flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 shrink-0">
+                  <BotMessageSquare className="h-4 w-4" />
+                </div>
+                <div className="text-xs space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-foreground">AI Sustainability Advisory</span>
+                    <Badge variant="outline" className="text-[9px]">Grounded in CEA v19 Data</Badge>
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Log your first activities to receive personalized recommendations. Start with transport, electricity, or food to see your footprint breakdown.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
@@ -284,14 +581,14 @@ export default function DashboardPage() {
                 Measurable Impact Achieved
               </span>
               <h3 className="text-lg font-bold text-foreground mt-0.5">
-                Cumulative Avoided Greenhouse Gases
+                Total Logged Footprint
               </h3>
             </div>
             <div className="text-right">
               <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
-                {progressSummary?.totalAvoidedKg?.toFixed(1) || "28.5"} kg
+                {footprint?.total_kg_co2e ? footprint.total_kg_co2e.toFixed(1) : "0.0"} kg
               </span>
-              <span className="text-xs text-muted-foreground ml-1">CO₂e Avoided</span>
+              <span className="text-xs text-muted-foreground ml-1">CO₂e Logged</span>
             </div>
           </div>
 
@@ -302,9 +599,9 @@ export default function DashboardPage() {
               </div>
               <div>
                 <span className="font-bold text-foreground tabular-nums text-sm">
-                  {progressSummary?.treesEquivalent || 1.4} Trees
+                  {totalKg / 20 > 0 ? (totalKg / 20).toFixed(1) : 0} Equivalent Trees
                 </span>
-                <p className="text-[11px] text-muted-foreground">Annual seedling absorption eq.</p>
+                <p className="text-[11px] text-muted-foreground">Annual carbon absorption eq.</p>
               </div>
             </div>
 
@@ -314,9 +611,9 @@ export default function DashboardPage() {
               </div>
               <div>
                 <span className="font-bold text-foreground tabular-nums text-sm">
-                  {progressSummary?.kmDrivenAvoided || 164} km
+                  {totalKg / 0.165 > 0 ? (totalKg / 0.165).toFixed(0) : 0} km equivalent drive
                 </span>
-                <p className="text-[11px] text-muted-foreground">Avoided single-occupant driving</p>
+                <p className="text-[11px] text-muted-foreground">Single-occupant vehicle avoidance</p>
               </div>
             </div>
 
@@ -326,9 +623,9 @@ export default function DashboardPage() {
               </div>
               <div>
                 <span className="font-bold text-foreground tabular-nums text-sm">
-                  ~34.8 kWh
+                  {totalKg / 0.82 > 0 ? (totalKg / 0.82).toFixed(0) : 0} kWh
                 </span>
-                <p className="text-[11px] text-muted-foreground">Grid power avoided via habits</p>
+                <p className="text-[11px] text-muted-foreground">Grid electricity avoided</p>
               </div>
             </div>
           </div>
@@ -339,9 +636,9 @@ export default function DashboardPage() {
       <ExplainabilityDrawer
         open={isExplainOpen}
         onOpenChange={setIsExplainOpen}
-        lineItems={explainData?.lineItems || []}
-        confidenceScore={footprint?.confidence || 82}
-        confidenceExplanations={explainData?.confidenceExplanation || []}
+        lineItems={explainDataForDrawer?.lineItems ?? []}
+        confidenceScore={footprint?.confidence ?? 82}
+        confidenceExplanations={explainDataForDrawer?.confidenceExplanation ?? []}
       />
     </AppShell>
   );

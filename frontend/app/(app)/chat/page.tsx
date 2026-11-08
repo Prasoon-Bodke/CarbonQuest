@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { api } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,27 +53,17 @@ export default function ChatPage() {
     setIsSending(true);
 
     try {
-      const res = await fetch("/api/v1/chat/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userText }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: data.id || "ast_" + Date.now(),
-            role: "assistant",
-            content: data.reply,
-            grounding: data.grounding,
-            disclaimer: data.disclaimer || "Estimates based on published emission factors, not measured emissions.",
-          },
-        ]);
-      } else {
-        throw new Error();
-      }
+      const data = await api.chat.send({ message: userText });
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (data as any).id || data.session_id || "ast_" + Date.now(),
+          role: "assistant",
+          content: data.reply,
+          grounding: data.grounding,
+          disclaimer: data.disclaimer || "Estimates based on published emission factors, not measured emissions.",
+        },
+      ]);
     } catch {
       // Offline / local deterministic fallback
       setTimeout(() => {

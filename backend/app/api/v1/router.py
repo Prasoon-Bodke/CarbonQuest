@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from app.api.v1.health import router as health_router
+from app.api.v1.auth import router as auth_router
 from app.api.v1.profile import router as profile_router
 from app.api.v1.activities import router as activities_router
 from app.api.v1.footprint import router as footprint_router
@@ -14,6 +15,7 @@ from app.api.v1.integrations import router as integrations_router
 v1_router = APIRouter()
 
 v1_router.include_router(health_router)
+v1_router.include_router(auth_router)
 v1_router.include_router(profile_router)
 v1_router.include_router(activities_router)
 v1_router.include_router(footprint_router)
