@@ -12,7 +12,7 @@ class ProfileRepository(BaseRepository[Profile]):
         if not profile:
             profile = Profile(
                 id=user_id,
-                display_name="Aarav Sharma",
+                display_name="Prasoon Bodke",
                 age_band="25-34",
                 region_code="IN",
                 household_size=2,

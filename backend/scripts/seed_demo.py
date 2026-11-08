@@ -36,14 +36,14 @@ def seed_demo():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        print("-> Seeding Realistic Demo Account (Aarav Sharma, 8-Week Activity Stream, Pune Baseline)...")
+        print("-> Seeding Realistic Demo Account (Prasoon Bodke, 8-Week Activity Stream, Pune Baseline)...")
 
         # 1. Profile
         profile = db.query(Profile).filter(Profile.id == DEMO_USER_ID).first()
         if not profile:
             profile = Profile(
                 id=DEMO_USER_ID,
-                display_name="Aarav Sharma",
+                display_name="Prasoon Bodke",
                 age_band="25-34",
                 region_code="IN",
                 household_size=2,

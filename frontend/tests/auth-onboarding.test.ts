@@ -90,7 +90,7 @@ describe("Authentication & Onboarding Workflow", () => {
       expect(profile.display_name).toBe(testName);
     });
 
-    it("instant demo login provides seeded Aarav Sharma profile", async () => {
+    it("instant demo login provides seeded demo admin profile", async () => {
       if (!backendAvailable) return;
 
       const demoRes = await authService.signInDemo();
@@ -98,7 +98,7 @@ describe("Authentication & Onboarding Workflow", () => {
       expect(getAuthToken()).toBe(demoRes.token);
 
       const profile = await api.profile.get();
-      expect(profile.display_name).toBe("Aarav Sharma");
+      expect(profile.display_name).toBe("Prasoon Bodke");
       expect(profile.onboarding_done).toBe(true);
     });
   });

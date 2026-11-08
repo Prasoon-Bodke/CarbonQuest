@@ -14,8 +14,8 @@ import { ApiError } from "@/lib/api";
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [name, setName] = React.useState("Aarav Sharma");
-  const [email, setEmail] = React.useState("aarav.pune@vit.edu");
+  const [name, setName] = React.useState("Prasoon Bodke");
+  const [email, setEmail] = React.useState("prasoon.bodke@carbonquest.in");
   const [password, setPassword] = React.useState("password123");
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
@@ -92,7 +92,7 @@ export default function SignupPage() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Aarav Sharma"
+                placeholder="Prasoon Bodke"
                 required
               />
             </div>
@@ -103,7 +103,7 @@ export default function SignupPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="aarav@vit.edu"
+                placeholder="prasoon@carbonquest.in"
                 required
               />
             </div>

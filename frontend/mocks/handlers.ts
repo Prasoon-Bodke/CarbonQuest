@@ -16,7 +16,7 @@ export const handlers = [
     method: "GET",
     response: {
       id: "demo-user-pune",
-      display_name: "Aarav Sharma",
+      display_name: "Prasoon Bodke",
       age_band: "25-34",
       region_code: "IN",
       household_size: 2,

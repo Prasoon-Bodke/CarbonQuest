@@ -20,14 +20,14 @@ export function Topbar({ title, subtitle }: { title?: string; subtitle?: string 
   const { toast } = useToast();
   const { profile, logout, loginDemo } = useAuth();
 
-  const displayName = profile?.display_name || "Aarav Sharma";
+  const displayName = profile?.display_name || "Prasoon Bodke";
 
   const handleSwitchToDemo = async () => {
     try {
       await loginDemo();
       toast({
-        title: "Switched to Demo Account",
-        description: "Aarav Sharma (Pune baseline ~128 kg CO₂e) loaded.",
+        title: "Switched to Demo Admin Account",
+        description: "Prasoon Bodke (Pune baseline ~128 kg CO₂e) loaded.",
         variant: "success",
       });
       window.location.reload();
@@ -74,7 +74,7 @@ export function Topbar({ title, subtitle }: { title?: string; subtitle?: string 
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSwitchToDemo}>
               <div className="flex flex-col">
-                <span className="font-semibold text-xs">Aarav Sharma (Primary Demo)</span>
+                <span className="font-semibold text-xs">Prasoon Bodke (Demo Admin)</span>
                 <span className="text-[10px] text-muted-foreground">~128 kg CO₂e baseline • 8-week history</span>
               </div>
             </DropdownMenuItem>

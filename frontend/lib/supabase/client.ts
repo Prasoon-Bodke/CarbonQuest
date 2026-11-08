@@ -202,7 +202,7 @@ export const authService = {
   },
 
   async signInDemo() {
-    // Demo login always uses the seeded Aarav Sharma profile via FastAPI /auth/demo
+    // Demo login always uses the seeded Prasoon Bodke profile via FastAPI /auth/demo
     const res = await api.auth.demo();
     setAuthToken(res.access_token);
     setStoredUser(res.user);

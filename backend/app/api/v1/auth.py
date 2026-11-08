@@ -91,7 +91,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         raise AppError(code="VALIDATION_ERROR", message="Email is required", status_code=422)
 
     # Special case: demo credentials bind to DEMO_USER_ID
-    if "demo" in email_clean or email_clean == "aarav.pune@vit.edu":
+    if "demo" in email_clean or email_clean == "aarav.pune@vit.edu" or "prasoon" in email_clean:
         user_id = DEMO_USER_ID
     else:
         user_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"carbonquest:{email_clean}"))
@@ -115,11 +115,11 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 @router.post("/demo", response_model=AuthResponse)
 def demo_login(db: Session = Depends(get_db)):
     """
-    Instant access to the seeded Aarav Sharma demo account with 8 weeks of validated activity history.
+    Instant access to the seeded Prasoon Bodke demo admin account with 8 weeks of validated activity history.
     """
     repo = ProfileRepository(db)
     profile = repo.get_or_create(DEMO_USER_ID)
-    email = "aarav.sharma@example.com"
+    email = "prasoon.bodke@carbonquest.in"
     token = mint_supabase_jwt(user_id=DEMO_USER_ID, email=email)
     return AuthResponse(
         access_token=token,
@@ -128,7 +128,7 @@ def demo_login(db: Session = Depends(get_db)):
         user=AuthResponseUser(
             id=profile.id,
             email=email,
-            display_name=profile.display_name or "Aarav Sharma",
+            display_name=profile.display_name or "Prasoon Bodke",
             onboarding_done=profile.onboarding_done,
         ),
     )

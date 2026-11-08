@@ -60,9 +60,6 @@ export function Sidebar() {
               <span className="font-bold text-sm tracking-tight text-foreground">
                 CARBON<span className="text-emerald-600 dark:text-emerald-400">QUEST</span>
               </span>
-              <span className="text-[10px] text-muted-foreground font-medium">
-                PCCOE Pune 2026
-              </span>
             </div>
           )}
         </Link>

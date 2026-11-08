@@ -24,7 +24,7 @@ def mint_token(user_id: str = DEMO_USER_ID, exp_minutes: int = 60 * 24) -> str:
         "sub": user_id,
         "aud": "authenticated",
         "role": "authenticated",
-        "email": "aarav.sharma@example.com",
+        "email": "prasoon.bodke@carbonquest.in",
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(minutes=exp_minutes)).timestamp()),
     }

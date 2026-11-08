@@ -38,7 +38,7 @@ export default function OnboardingPage() {
   // Form State covering all required sectors & preferences
   const [formData, setFormData] = React.useState({
     // Demographics & Target
-    displayName: "Aarav Sharma",
+    displayName: "Prasoon Bodke",
     ageBand: "25-34",
     regionCode: "IN",
     householdSize: 2,
@@ -363,7 +363,7 @@ export default function OnboardingPage() {
                     <Input
                       value={formData.displayName}
                       onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                      placeholder="e.g. Aarav Sharma"
+                      placeholder="e.g. Prasoon Bodke"
                     />
                   </div>
 

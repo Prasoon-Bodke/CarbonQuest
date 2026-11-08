@@ -57,8 +57,8 @@ export default function LoginPage() {
       await authService.signInDemo();
       const profile = await api.profile.get();
       toast({
-        title: "Signed in as Demo User",
-        description: `Welcome, ${profile.display_name || "Aarav Sharma"} (Pune baseline)!`,
+        title: "Signed in as Demo Admin",
+        description: `Welcome, ${profile.display_name || "Prasoon Bodke"} (Pune baseline)!`,
         variant: "success",
       });
       router.push("/dashboard");
@@ -124,7 +124,7 @@ export default function LoginPage() {
               onClick={handleDemoLogin}
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 gap-1.5"
             >
-              Sign In as Demo User (Aarav Sharma)
+              Sign In as Demo Admin (Prasoon Bodke)
               <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </div>

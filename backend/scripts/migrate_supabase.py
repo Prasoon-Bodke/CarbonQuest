@@ -70,7 +70,7 @@ def run_migration_and_seeds(seed_demo_account: bool = False):
 
     # 5. Optionally seed 8-week demo user
     if seed_demo_account:
-        print("[*] Seeding 8-week demonstration user (Aarav Sharma)...")
+        print("[*] Seeding 8-week demonstration user (Prasoon Bodke)...")
         try:
             seed_demo()
             print("    [OK] Demonstration user profile and history created.")

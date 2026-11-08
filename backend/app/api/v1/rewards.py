@@ -30,7 +30,7 @@ def get_leaderboard(
         "leaderboard": [
             {"rank": 1, "display_name": "Rohan M.", "eco_score": 88, "co2_avoided_kg": 42.5, "points": 340},
             {"rank": 2, "display_name": "Priya S.", "eco_score": 82, "co2_avoided_kg": 38.0, "points": 290},
-            {"rank": 3, "display_name": "Aarav Sharma (You)", "eco_score": 68, "co2_avoided_kg": 26.0, "points": 120},
+            {"rank": 3, "display_name": "Prasoon Bodke (You)", "eco_score": 68, "co2_avoided_kg": 26.0, "points": 120},
             {"rank": 4, "display_name": "Neha K.", "eco_score": 64, "co2_avoided_kg": 21.0, "points": 95},
         ]
     }
