@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     APP_ENV: str = "local"
     DATABASE_URL: str = "sqlite:///./dev.db"
     SUPABASE_URL: str = ""
-    SUPABASE_JWT_SECRET: str = ""
+    SUPABASE_JWT_SECRET: str = "super-secret-jwt-token-for-dev-local-testing-32bytes"
     SUPABASE_JWKS_URL: str = ""
     CORS_ORIGINS: str = "http://localhost:3000"
     
