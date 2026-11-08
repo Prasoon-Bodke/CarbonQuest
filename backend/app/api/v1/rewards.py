@@ -28,10 +28,11 @@ def get_leaderboard(
 ):
     return {
         "leaderboard": [
-            {"rank": 1, "display_name": "Rohan M.", "eco_score": 88, "co2_avoided_kg": 42.5, "points": 340},
-            {"rank": 2, "display_name": "Priya S.", "eco_score": 82, "co2_avoided_kg": 38.0, "points": 290},
-            {"rank": 3, "display_name": "Prasoon Bodke (You)", "eco_score": 68, "co2_avoided_kg": 26.0, "points": 120},
-            {"rank": 4, "display_name": "Neha K.", "eco_score": 64, "co2_avoided_kg": 21.0, "points": 95},
+            {"rank": 1, "display_name": "Shreya Chaudhari", "eco_score": 92, "co2_avoided_kg": 48.5, "points": 380},
+            {"rank": 2, "display_name": "Paras Bubane", "eco_score": 88, "co2_avoided_kg": 43.0, "points": 340},
+            {"rank": 3, "display_name": "Prasoon Bodke (You)", "eco_score": 84, "co2_avoided_kg": 37.5, "points": 290},
+            {"rank": 4, "display_name": "Atharv Chaudhari", "eco_score": 79, "co2_avoided_kg": 32.0, "points": 235},
+            {"rank": 5, "display_name": "Harshal Chape", "eco_score": 74, "co2_avoided_kg": 27.5, "points": 190},
         ]
     }
 
