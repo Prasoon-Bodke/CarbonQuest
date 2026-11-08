@@ -1,0 +1,99 @@
+[
+  {
+    "action_key": "transport.shift_auto_to_bus",
+    "title": "Replace 2 auto trips a week with the bus",
+    "description": "Shift two weekly short-distance auto-rickshaw commutes to municipal city bus transit.",
+    "category": "transport",
+    "activity_key": "transport.auto_cng_km",
+    "change_type": "shift_mode",
+    "default_params": {
+      "target_activity_key": "transport.bus_km",
+      "trips_per_week": 2,
+      "trip_distance_km": 10
+    },
+    "difficulty": 2,
+    "cost_level": 1,
+    "tags": ["transit", "daily_commute", "money_saver"],
+    "is_active": true
+  },
+  {
+    "action_key": "transport.cycle_short_commute",
+    "title": "Cycle for short commutes twice a week",
+    "description": "Use a bicycle for trips under 4 km instead of motorized transport twice weekly.",
+    "category": "transport",
+    "activity_key": "transport.two_wheeler_petrol_km",
+    "change_type": "shift_mode",
+    "default_params": {
+      "target_activity_key": null,
+      "trips_per_week": 2,
+      "trip_distance_km": 3
+    },
+    "difficulty": 3,
+    "cost_level": 1,
+    "tags": ["active_mobility", "fitness", "zero_emission"],
+    "is_active": true
+  },
+  {
+    "action_key": "electricity.reduce_ac_one_hour",
+    "title": "Reduce AC usage by 1 hour per day",
+    "description": "Set AC timer to turn off 1 hour earlier or utilize energy-saving fan mode.",
+    "category": "electricity",
+    "activity_key": "electricity.ac_hours",
+    "change_type": "reduce_quantity",
+    "default_params": {
+      "delta_per_day": -1.0,
+      "ac_power_kw": 1.5
+    },
+    "difficulty": 2,
+    "cost_level": 1,
+    "tags": ["cooling", "energy_efficiency", "easy_habit"],
+    "is_active": true
+  },
+  {
+    "action_key": "electricity.set_ac_24_degrees",
+    "title": "Set AC temperature to 24°C standard",
+    "description": "Operate split air conditioner at BEE recommended 24°C instead of 20°C to conserve ~24% electricity.",
+    "category": "electricity",
+    "activity_key": "electricity.ac_hours",
+    "change_type": "reduce_quantity",
+    "default_params": {
+      "delta_percentage": 0.20
+    },
+    "difficulty": 1,
+    "cost_level": 1,
+    "tags": ["cooling", "quick_win", "money_saver"],
+    "is_active": true
+  },
+  {
+    "action_key": "food.meatless_mondays",
+    "title": "Adopt plant-based meals 2 days per week",
+    "description": "Replace non-vegetarian meals with nutritious lentils, pulses, and vegetables two days a week.",
+    "category": "food",
+    "activity_key": "food.meal_non_veg",
+    "change_type": "swap_item",
+    "default_params": {
+      "target_activity_key": "food.meal_veg",
+      "swaps_per_week": 2
+    },
+    "difficulty": 2,
+    "cost_level": 1,
+    "tags": ["diet", "health", "plant_rich"],
+    "is_active": true
+  },
+  {
+    "action_key": "waste.compost_wet_waste",
+    "title": "Segregate and compost household wet waste",
+    "description": "Divert kitchen food scraps from landfill to home or community composting units.",
+    "category": "waste",
+    "activity_key": "waste.landfill_kg",
+    "change_type": "shift_mode",
+    "default_params": {
+      "target_activity_key": "waste.compost_kg",
+      "kg_per_week": 3.0
+    },
+    "difficulty": 3,
+    "cost_level": 1,
+    "tags": ["waste_management", "circular", "soil_health"],
+    "is_active": true
+  }
+]

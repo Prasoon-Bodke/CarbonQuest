@@ -1,0 +1,37 @@
+[
+  {
+    "key": "first_log",
+    "title": "First Step",
+    "description": "Logged your first validated carbon activity.",
+    "criteria": { "type": "activity_count", "threshold": 1 },
+    "icon": "Sparkles"
+  },
+  {
+    "key": "streak_7",
+    "title": "Consistent Pioneer",
+    "description": "Maintained a 7-day daily tracking streak.",
+    "criteria": { "type": "streak_days", "threshold": 7 },
+    "icon": "Flame"
+  },
+  {
+    "key": "transit_hero",
+    "title": "Transit Champion",
+    "description": "Logged 10 public transit or active mobility trips.",
+    "criteria": { "type": "category_trips", "category": "transport", "threshold": 10 },
+    "icon": "Bus"
+  },
+  {
+    "key": "ac_saver",
+    "title": "Cool Saver",
+    "description": "Completed AC optimization actions and verified energy reduction.",
+    "criteria": { "type": "action_completed", "category": "electricity", "threshold": 3 },
+    "icon": "Zap"
+  },
+  {
+    "key": "eco_warrior_50kg",
+    "title": "50kg Avoided Club",
+    "description": "Achieved 50 kg CO₂e in cumulative measured emissions reduction.",
+    "criteria": { "type": "co2_avoided_kg", "threshold": 50.0 },
+    "icon": "Award"
+  }
+]

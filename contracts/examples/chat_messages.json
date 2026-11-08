@@ -1,0 +1,33 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/chat/messages",
+    "headers": {
+      "Authorization": "Bearer <access_token>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "session_id": null,
+      "message": "Why is transport my biggest source?"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "session_id": "session-10293847",
+      "reply": "Transport represents 31.3% (40.0 kg CO2e) of your 128.0 kg monthly footprint, primarily due to regular petrol two-wheeler commuting. Transitioning 2 trips weekly to public bus transit saves an estimated 14.0 kg CO2e monthly.",
+      "degraded": false,
+      "grounding": {
+        "footprint_period": "2026-11",
+        "factor_sources": [
+          "Central Electricity Authority (CEA) Baseline Database v19 (2024)",
+          "ARAI / MoEFCC GHG Third National Communication (2023)"
+        ],
+        "recommendation_ids": [
+          "rec-1a2b3c4d"
+        ]
+      },
+      "disclaimer": "Estimates based on published emission factors, not measured emissions."
+    }
+  }
+}

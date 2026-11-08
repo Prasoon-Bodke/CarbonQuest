@@ -1,0 +1,49 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/recommendations/generate",
+    "headers": {
+      "Authorization": "Bearer <access_token>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "max_items": 5,
+      "focus_category": null
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "cycle": 3,
+      "degraded": false,
+      "items": [
+        {
+          "id": "rec-1a2b3c4d",
+          "action_key": "transport.shift_auto_to_bus",
+          "title": "Replace 2 auto trips a week with the bus",
+          "estimated_saving_kg_month": 14.0,
+          "basis": "estimated",
+          "difficulty": 2,
+          "cost_level": 1,
+          "priority_rank": 1,
+          "score": 0.81,
+          "score_breakdown": {
+            "impact": 0.70,
+            "preference": 0.90,
+            "feasibility": 0.80,
+            "goal_fit": 0.60,
+            "cooldown_penalty": 0.00
+          },
+          "explanation": "Transport is your largest source and you accepted bus trips before.",
+          "status": "proposed"
+        }
+      ],
+      "adaptation": {
+        "feedback_count": 12,
+        "changes_since_last_cycle": [
+          "Cycling twice a week ranked lower: skipped as not_practical"
+        ]
+      }
+    }
+  }
+}

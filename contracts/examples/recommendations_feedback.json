@@ -1,0 +1,33 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/recommendations/rec-1a2b3c4d/feedback",
+    "headers": {
+      "Authorization": "Bearer <access_token>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "response": "skipped",
+      "reason_code": "not_practical",
+      "note": "",
+      "modified_params": null
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "recommendation": {
+        "id": "rec-1a2b3c4d",
+        "status": "skipped"
+      },
+      "profile_update": {
+        "feedback_count": 13,
+        "summary": "Lower weight on cycling; difficulty tolerance 0.55"
+      },
+      "rewards": {
+        "points_awarded": 5,
+        "badges_awarded": []
+      }
+    }
+  }
+}

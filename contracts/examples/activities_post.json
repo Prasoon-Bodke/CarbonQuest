@@ -1,0 +1,56 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/activities",
+    "headers": {
+      "Authorization": "Bearer <access_token>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "category": "transport",
+      "activity_key": "transport.bus_km",
+      "quantity": 12.5,
+      "unit": "km",
+      "occurred_on": "2026-11-03",
+      "source": "manual",
+      "metadata": {
+        "mode": "bus",
+        "duration_min": 40
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "activity": {
+        "id": "7b88df4c-f179-44be-bfa9-43c22ec6dc91",
+        "category": "transport",
+        "activity_key": "transport.bus_km",
+        "quantity": 12.5,
+        "unit": "km",
+        "occurred_on": "2026-11-03",
+        "source": "manual",
+        "validation_status": "accepted",
+        "validation_score": 0.92,
+        "validation_reasons": []
+      },
+      "emission": {
+        "id": "e98ab823-7fa3-424a-85b2-32a2f8c5b9f7",
+        "kg_co2e": 1.0,
+        "factor": {
+          "id": "factor-bus-in",
+          "value": 0.08,
+          "unit": "kg CO2e/km",
+          "source_name": "TERI / ARAI Urban Transit Benchmark",
+          "source_year": 2023
+        },
+        "confidence": 0.82,
+        "confidence_reasons": [
+          "Emission factor region (IN) exactly matches user regional profile",
+          "Self-reported manual entry",
+          "Passed all physical plausibility and speed bounds"
+        ]
+      }
+    }
+  }
+}

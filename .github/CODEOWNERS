@@ -1,0 +1,16 @@
+# CarbonQuest GitHub CODEOWNERS
+# Rule: Conflict avoidance by construction. Folder ownership is exclusive.
+
+# Teammate 1 (Frontend Developer) owns all frontend files
+/frontend/ @teammate1
+
+# Teammate 2 (Backend & Carbon Intelligence Developer) owns backend (except AI)
+/backend/ @teammate2
+
+# Teammate 3 (AI & Adaptive Intelligence Developer) owns AI module & AI documentation
+/backend/app/ai/ @teammate3
+/backend/tests/ai/ @teammate3
+/docs/ai/ @teammate3
+
+# Contracts require unanimous agreement across all three developers
+/contracts/ @teammate1 @teammate2 @teammate3

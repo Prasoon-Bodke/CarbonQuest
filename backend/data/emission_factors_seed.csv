@@ -1,0 +1,23 @@
+category,activity_key,unit,kg_co2e_per_unit,region_code,source_name,source_url,source_year,version,valid_from,valid_to,notes
+transport,transport.car_petrol_km,km,0.174,IN,ARAI / MoEFCC GHG Third National Communication,https://moef.gov.in,2023,1,2023-01-01,,Mid-size petrol passenger car
+transport,transport.car_diesel_km,km,0.165,IN,ARAI / DEFRA 2023,https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting,2023,1,2023-01-01,,Mid-size diesel car
+transport,transport.car_cng_km,km,0.118,IN,TERI / ARAI Natural Gas Vehicle Assessment,https://www.teriin.org,2023,1,2023-01-01,,Factory-fitted CNG passenger car
+transport,transport.car_ev_km,km,0.123,IN,CEA Grid Factor v19 x EV efficiency,https://cea.nic.in,2024,1,2024-01-01,,0.15 kWh/km at 0.82 kg/kWh national grid mix
+transport,transport.two_wheeler_petrol_km,km,0.045,IN,ARAI / MoEFCC India GHG Program,https://moef.gov.in,2023,1,2023-01-01,,110-150cc commuter motorcycle/scooter
+transport,transport.two_wheeler_ev_km,km,0.019,IN,CEA Grid Factor v19 x e-scooter efficiency,https://cea.nic.in,2024,1,2024-01-01,,0.023 kWh/km at 0.82 kg/kWh
+transport,transport.bus_km,km,0.080,IN,India MoEFCC / TERI Urban Transit Benchmark,https://www.teriin.org,2023,1,2023-01-01,,City bus transit per passenger-km
+transport,transport.metro_km,km,0.035,IN,Delhi Metro DMRC Clean Development Mechanism & CEA,https://delhimetrorail.com,2023,1,2023-01-01,,Urban mass rapid electric metro per passenger-km
+transport,transport.auto_cng_km,km,0.068,IN,TERI / ARAI Auto-Rickshaw Emissions Inventory,https://www.teriin.org,2023,1,2023-01-01,,Shared 3-wheeler CNG auto per passenger-km
+transport,transport.flight_domestic_km,km,0.198,IN,ICAO Carbon Emissions Calculator / DGCA India,https://www.icao.int,2023,1,2023-01-01,,Domestic economy flight per passenger-km
+electricity,electricity.grid_kwh,kWh,0.820,IN,Central Electricity Authority (CEA) Baseline Database v19,https://cea.nic.in,2024,1,2024-01-01,,Indian National Grid weighted average baseline emission factor
+electricity,electricity.ac_hours,hours,1.230,IN,CEA Grid v19 x 1.5kW 3-Star AC,https://cea.nic.in,2024,1,2024-01-01,,1.5 kW compressor power draw at 0.82 kg/kWh
+electricity,electricity.lpg_cylinder,cylinder,42.500,IN,IPCC Guidelines for National Greenhouse Gas Inventories & IOCL,https://www.ipcc-nggip.iges.or.jp,2023,1,2023-01-01,,Standard 14.2 kg domestic LPG cylinder combustion
+electricity,electricity.solar_offset_kwh,kWh,-0.820,IN,CEA Grid v19 Avoided Thermal Generation,https://cea.nic.in,2024,1,2024-01-01,,Avoided grid electricity via rooftop solar export
+food,food.meal_veg,meal,0.780,IN,Poore & Nemecek Science (2018) / ICMR-NIN India Dietary Analysis,https://www.science.org,2023,1,2023-01-01,,Standard Indian vegetarian meal (dal, rice, sabzi, roti)
+food,food.meal_non_veg,meal,2.150,IN,Poore & Nemecek Science (2018) / FAO GHG Livestock,https://www.fao.org,2023,1,2023-01-01,,Standard Indian non-veg meal (chicken/mutton curry, rice, roti)
+food,food.meal_vegan,meal,0.520,IN,Poore & Nemecek (2018) / EAT-Lancet Commission,https://eatforum.org,2023,1,2023-01-01,,Plant-based meal without dairy
+food,food.waste_kg,kg,1.900,IN,FAO Food Wastage Footprint / IPCC AR6,https://www.ipcc.ch,2023,1,2023-01-01,,Decomposition emissions from discarded cooked food
+shopping,shopping.clothing_item,item,8.500,IN,Ellen MacArthur Foundation / WRAP UK Textile Factors,https://ellenmacarthurfoundation.org,2023,1,2023-01-01,,Average cotton/poly blend garment life-cycle impact
+shopping,shopping.delivery_package,package,0.450,IN,World Economic Forum Future of Last-Mile Delivery,https://www.weforum.org,2023,1,2023-01-01,,Urban courier delivery package last-mile emissions
+waste,waste.landfill_kg,kg,0.950,IN,CPCB Annual Report on Solid Waste / IPCC Municipal Solid Waste,https://cpcb.nic.in,2023,1,2023-01-01,,Unsegregated municipal solid waste sent to landfill
+waste,waste.compost_kg,kg,0.080,IN,CPCB Technical Guidelines for Decentralized Composting,https://cpcb.nic.in,2023,1,2023-01-01,,Decentralized aerobic organic waste composting
