@@ -1,10 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
+import uuid
+
 from app.core.deps import get_db, get_current_user
+from app.core.errors import AppError
 from app.models import Activity, EmissionRecord, EmissionFactor
+from app.repositories.activity import ActivityRepository
+from app.repositories.emission import EmissionRepository
+from app.repositories.profile import ProfileRepository
 from app.schemas.activity import (
     ActivityCreate,
+    ActivityUpdate,
     ActivityCreateResponse,
     ActivityReadItem,
     ActivityListResponse,
@@ -15,10 +22,6 @@ from app.services.validation.service import ValidationService
 from app.services.carbon.engine import CarbonEngine
 from app.services.carbon.factors import FactorService
 from app.services.rewards.service import on_event
-import uuid
-import csv
-import io
-from datetime import date, datetime
 
 router = APIRouter()
 
@@ -54,7 +57,20 @@ def create_activity(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user),
 ):
-    # 1. Validation step
+    profile_repo = ProfileRepository(db)
+    profile = profile_repo.get_or_create(user_id)
+
+    # 1. Mandatory consent check
+    if not profile.consent_tracking:
+        raise AppError(
+            code="CONSENT_REQUIRED",
+            message="User tracking consent is required to log activities. Please update privacy consents in settings.",
+            status_code=403,
+        )
+
+    act_repo = ActivityRepository(db)
+
+    # 2. Rule-based plausibility validation (speed, distance, daily cap, statistical z-score)
     status, score, reasons, dedupe = ValidationService.validate(
         user_id=user_id,
         category=payload.category.value,
@@ -62,18 +78,25 @@ def create_activity(
         quantity=payload.quantity,
         occurred_on=str(payload.occurred_on),
         metadata=payload.metadata,
+        db=db,
     )
 
     if status == "rejected":
-        raise HTTPException(
+        raise AppError(
+            code="ACTIVITY_REJECTED",
+            message="Activity failed physical plausibility or bound validation rules",
             status_code=422,
-            detail={"code": "ACTIVITY_REJECTED", "message": "Failed plausibility validation", "details": reasons},
+            details=[{"reason": r} for r in reasons],
         )
 
-    # Check duplicate
-    dup = db.query(Activity).filter(Activity.user_id == user_id, Activity.dedupe_hash == dedupe).first()
+    # 3. Duplicate check
+    dup = act_repo.find_duplicate(user_id, dedupe)
     if dup:
-        raise HTTPException(status_code=409, detail="Duplicate activity entry detected")
+        raise AppError(
+            code="DUPLICATE_ACTIVITY",
+            message="Duplicate activity entry detected with identical timestamp and quantity",
+            status_code=409,
+        )
 
     act = Activity(
         id=str(uuid.uuid4()),
@@ -90,14 +113,12 @@ def create_activity(
         validation_reasons=reasons,
         dedupe_hash=dedupe,
     )
-    db.add(act)
-    db.commit()
-    db.refresh(act)
+    act_repo.add(act)
 
-    # 2. Deterministic carbon engine calculation
+    # 4. Deterministic carbon calculation
     record = CarbonEngine.calculate_emission(db, act)
 
-    # 3. Trigger rewards hook
+    # 5. Cross-module rewards hook
     on_event(db, user_id, event="activity_logged", ref=act.id)
 
     emission_result = None
@@ -141,12 +162,8 @@ def list_activities(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user),
 ):
-    query = db.query(Activity).filter(Activity.user_id == user_id)
-    if category:
-        query = query.filter(Activity.category == category)
-
-    total = query.count()
-    items = query.order_by(Activity.occurred_on.desc()).offset(offset).limit(limit).all()
+    act_repo = ActivityRepository(db)
+    items, total = act_repo.list_user_activities(user_id, category=category, limit=limit, offset=offset)
 
     return ActivityListResponse(
         items=[
@@ -169,15 +186,114 @@ def list_activities(
         offset=offset,
     )
 
+@router.patch("/activities/{activity_id}", response_model=ActivityCreateResponse, tags=["Activities"])
+def update_activity(
+    activity_id: str,
+    payload: ActivityUpdate,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user),
+):
+    profile_repo = ProfileRepository(db)
+    profile = profile_repo.get_or_create(user_id)
+    if not profile.consent_tracking:
+        raise AppError(
+            code="CONSENT_REQUIRED",
+            message="User tracking consent is required to update activities",
+            status_code=403,
+        )
+
+    act_repo = ActivityRepository(db)
+    act = act_repo.get_by_user_and_id(user_id, activity_id)
+    if not act:
+        raise AppError(code="NOT_FOUND", message="Activity not found", status_code=404)
+
+    # Determine new field values
+    new_cat = payload.category.value if payload.category else act.category
+    new_key = payload.activity_key if payload.activity_key else act.activity_key
+    new_qty = payload.quantity if payload.quantity is not None else act.quantity
+    new_unit = payload.unit if payload.unit else act.unit
+    new_occ = payload.occurred_on if payload.occurred_on else act.occurred_on
+    new_source = payload.source.value if payload.source else act.source
+    new_meta = payload.metadata if payload.metadata is not None else act.metadata_json
+
+    status, score, reasons, dedupe = ValidationService.validate(
+        user_id=user_id,
+        category=new_cat,
+        activity_key=new_key,
+        quantity=new_qty,
+        occurred_on=str(new_occ),
+        metadata=new_meta,
+        db=db,
+        exclude_activity_id=activity_id,
+    )
+
+    if status == "rejected":
+        raise AppError(
+            code="ACTIVITY_REJECTED",
+            message="Updated activity failed validation rules",
+            status_code=422,
+            details=[{"reason": r} for r in reasons],
+        )
+
+    act.category = new_cat
+    act.activity_key = new_key
+    act.quantity = new_qty
+    act.unit = new_unit
+    act.occurred_on = new_occ
+    act.source = new_source
+    act.metadata_json = new_meta
+    act.validation_status = status
+    act.validation_score = score
+    act.validation_reasons = reasons
+    act.dedupe_hash = dedupe
+
+    act_repo.update(act)
+
+    # Recalculate emission record deterministically
+    record = CarbonEngine.calculate_emission(db, act)
+
+    emission_result = None
+    if record and record.factor:
+        factor_ref = EmissionFactorRef(
+            id=record.factor.id,
+            value=record.factor.kg_co2e_per_unit,
+            unit=f"kg CO2e/{record.factor.unit}",
+            source_name=record.factor.source_name,
+            source_year=record.factor.source_year,
+        )
+        emission_result = EmissionResult(
+            id=record.id,
+            kg_co2e=record.kg_co2e,
+            factor=factor_ref,
+            confidence=record.confidence,
+            confidence_reasons=record.confidence_reasons,
+        )
+
+    return ActivityCreateResponse(
+        activity=ActivityReadItem(
+            id=act.id,
+            category=act.category,
+            activity_key=act.activity_key,
+            quantity=act.quantity,
+            unit=act.unit,
+            occurred_on=act.occurred_on,
+            source=act.source,
+            validation_status=act.validation_status,
+            validation_score=act.validation_score,
+            validation_reasons=act.validation_reasons,
+        ),
+        emission=emission_result,
+    )
+
 @router.delete("/activities/{activity_id}", tags=["Activities"])
 def delete_activity(
     activity_id: str,
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user),
 ):
-    act = db.query(Activity).filter(Activity.id == activity_id, Activity.user_id == user_id).first()
+    act_repo = ActivityRepository(db)
+    act = act_repo.get_by_user_and_id(user_id, activity_id)
     if not act:
-        raise HTTPException(status_code=404, detail="Activity not found")
-    db.delete(act)
-    db.commit()
+        raise AppError(code="NOT_FOUND", message="Activity not found", status_code=404)
+    act_repo.delete(act)
     return {"status": "ok", "deleted_id": activity_id}

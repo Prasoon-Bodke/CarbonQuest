@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.core.deps import get_db, get_current_user
-from app.models import Profile, Activity, EmissionRecord, Recommendation, ActionLog, Simulation
 from datetime import datetime, timezone
+from app.core.deps import get_db, get_current_user
+from app.repositories.profile import ProfileRepository
 
 router = APIRouter()
 
@@ -11,11 +11,13 @@ def export_my_data(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user),
 ):
-    profile = db.query(Profile).filter(Profile.id == user_id).first()
-    activities = db.query(Activity).filter(Activity.user_id == user_id).all()
-    recommendations = db.query(Recommendation).filter(Recommendation.user_id == user_id).all()
-    action_logs = db.query(ActionLog).filter(ActionLog.user_id == user_id).all()
-    simulations = db.query(Simulation).filter(Simulation.user_id == user_id).all()
+    repo = ProfileRepository(db)
+    data = repo.export_data(user_id)
+    profile = data["profile"]
+    activities = data["activities"]
+    recommendations = data["recommendations"]
+    action_logs = data["action_logs"]
+    simulations = data["simulations"]
 
     return {
         "export_timestamp": datetime.now(timezone.utc).isoformat(),
@@ -26,6 +28,8 @@ def export_my_data(
             "household_size": profile.household_size if profile else 2,
             "monthly_target_kg": profile.monthly_target_kg if profile else 100.0,
             "preferences": profile.preferences if profile else {},
+            "consent_tracking": profile.consent_tracking if profile else False,
+            "consent_leaderboard": profile.consent_leaderboard if profile else False,
         },
         "activities_count": len(activities),
         "activities": [
@@ -37,6 +41,8 @@ def export_my_data(
                 "unit": a.unit,
                 "occurred_on": str(a.occurred_on),
                 "source": a.source,
+                "validation_status": a.validation_status,
+                "validation_score": a.validation_score,
             }
             for a in activities
         ],
@@ -50,10 +56,6 @@ def delete_my_data(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user),
 ):
-    profile = db.query(Profile).filter(Profile.id == user_id).first()
-    if profile:
-        # Cascade delete deletes activities, emission records, recommendations, preference profile, etc.
-        db.delete(profile)
-        db.commit()
-
-    return {"status": "ok", "message": "All user data, records, and preferences permanently erased"}
+    repo = ProfileRepository(db)
+    repo.delete_all(user_id)
+    return {"status": "ok", "message": "All personal records, telemetry, and preferences permanently erased"}
