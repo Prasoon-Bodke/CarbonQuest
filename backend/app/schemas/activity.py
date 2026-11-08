@@ -12,6 +12,15 @@ class ActivityCreate(BaseModel):
     source: SourceEnum = SourceEnum.manual
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
+class ActivityUpdate(BaseModel):
+    category: Optional[CategoryEnum] = None
+    activity_key: Optional[str] = None
+    quantity: Optional[float] = Field(default=None, gt=0)
+    unit: Optional[str] = None
+    occurred_on: Optional[date] = None
+    source: Optional[SourceEnum] = None
+    metadata: Optional[Dict[str, Any]] = None
+
 class EmissionFactorRef(BaseModel):
     id: str
     value: float
